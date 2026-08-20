@@ -15,6 +15,80 @@ def _is_vercel() -> bool:
     return bool(os.environ.get("VERCEL_ENV"))
 
 
+def _local_servers() -> set[str]:
+    return {"(local)", "localhost", ".", "(localdb)\\mssqllocaldb", "(localdb)\\mssqllocaldb"}
+
+
+def _parse_odbc_connection_string(cs: str) -> dict[str, str]:
+    """Parse Azure / ODBC connection strings into pymssql kwargs."""
+    out: dict[str, str] = {}
+    for part in cs.split(";"):
+        part = part.strip()
+        if not part or "=" not in part:
+            continue
+        key, val = part.split("=", 1)
+        key = re.sub(r"\s+", "", key.lower())
+        val = val.strip()
+        if key in ("server", "datasource", "address", "addr", "networkaddress"):
+            val = re.sub(r"^tcp:", "", val, flags=re.IGNORECASE)
+            # pymssql accepts host or host:port
+            out["host"] = val.split(",")[0] if "," in val else val
+        elif key in ("initialcatalog", "database"):
+            out["database"] = val
+        elif key in ("userid", "uid", "user", "username"):
+            out["user"] = val
+        elif key in ("password", "pwd"):
+            out["password"] = val
+    return out
+
+
+def _vercel_credentials(config: dict | None = None) -> tuple[str, str, str, str]:
+    """Resolve SQL credentials for Vercel (env vars, connection string, or CONFIG_JSON)."""
+    cfg = config or load_config()
+    db_cfg = cfg.get("database", {})
+
+    host = (os.environ.get("AZURE_SQL_HOST") or "").strip()
+    user = (os.environ.get("AZURE_SQL_USER") or "").strip()
+    password = os.environ.get("AZURE_SQL_PASSWORD") or ""
+    database = (os.environ.get("AZURE_SQL_DATABASE") or db_cfg.get("database") or "FSSInvoice").strip()
+
+    cs = (os.environ.get("AZURE_SQL_CONNECTION_STRING")
+          or os.environ.get("SQL_CONNECTION_STRING") or "").strip()
+    if cs:
+        parsed = _parse_odbc_connection_string(cs)
+        host = host or parsed.get("host", "")
+        user = user or parsed.get("user", "")
+        password = password or parsed.get("password", "")
+        database = parsed.get("database") or database
+
+    if not host:
+        server = (db_cfg.get("server") or "").strip()
+        if server and server.lower() not in {s.lower() for s in _local_servers()}:
+            host = server
+            user = user or (db_cfg.get("username") or "")
+            password = password or (db_cfg.get("password") or "")
+
+    if not host:
+        raise RuntimeError(
+            "Set AZURE_SQL_HOST + AZURE_SQL_USER + AZURE_SQL_PASSWORD on Vercel, "
+            "or paste AZURE_SQL_CONNECTION_STRING from Azure Portal, "
+            "or set CONFIG_JSON with a remote database section. See VERCEL_DEPLOY.md.")
+
+    if not user or not password:
+        raise RuntimeError(
+            "Set AZURE_SQL_USER and AZURE_SQL_PASSWORD on Vercel (SQL login required).")
+
+    return host, user, password, database
+
+
+def vercel_db_configured() -> bool:
+    try:
+        _vercel_credentials()
+        return True
+    except RuntimeError:
+        return False
+
+
 def _import_pyodbc():
     import pyodbc
     return pyodbc
@@ -61,16 +135,13 @@ def master_connection_string(config: dict | None = None) -> str:
 def get_connection(config: dict | None = None):
     """SQL Server — pymssql on Vercel; pyodbc on Windows."""
     if _is_vercel():
-        if not os.environ.get("AZURE_SQL_HOST"):
-            raise RuntimeError(
-                "Set AZURE_SQL_HOST, AZURE_SQL_USER, AZURE_SQL_PASSWORD on Vercel.")
+        host, user, password, database = _vercel_credentials(config)
         import pymssql
-        db_cfg = (config or load_config()).get("database", {})
         return pymssql.connect(
-            server=os.environ["AZURE_SQL_HOST"],
-            user=os.environ.get("AZURE_SQL_USER") or db_cfg.get("username", ""),
-            password=os.environ.get("AZURE_SQL_PASSWORD") or db_cfg.get("password", ""),
-            database=os.environ.get("AZURE_SQL_DATABASE") or db_cfg.get("database", "FSSInvoice"),
+            server=host,
+            user=user,
+            password=password,
+            database=database,
         )
     pyodbc = _import_pyodbc()
     return pyodbc.connect(connection_string(config), autocommit=False)
@@ -91,8 +162,8 @@ def _run_sql_file(cursor, path: str) -> None:
 def migrate(config: dict | None = None) -> str:
     """Create database and apply all scripts. Safe to run multiple times."""
     cfg = config or load_config()
-    if _is_vercel() and not os.environ.get("AZURE_SQL_HOST"):
-        return "Skipped migration on Vercel (no AZURE_SQL_* env)."
+    if _is_vercel() and not vercel_db_configured():
+        return "Skipped migration on Vercel (no database env configured)."
 
     if not _is_vercel():
         pyodbc = _import_pyodbc()
