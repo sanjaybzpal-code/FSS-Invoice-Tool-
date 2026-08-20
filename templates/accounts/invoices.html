@@ -100,7 +100,7 @@
 
       <tr>
 
-        <td>{{ i.InvoiceDate.strftime('%d-%m-%Y') if i.InvoiceDate else i.InvoiceDate }}</td>
+        <td>{{ i.InvoiceDate | fdate }}</td>
 
         <td><b>{{ i.InvoiceNumber }}</b></td>
 
@@ -112,7 +112,7 @@
 
         <td>{{ i.BusinessSegmentName or '-' }}</td>
 
-        <td class="num"><b>₹ {{ "{:,.2f}".format(i.TotalAmount) }}</b></td>
+        <td class="num"><b>₹ {{ "{:,.2f}".format(i.TotalAmount or 0) }}</b></td>
 
         <td style="white-space:nowrap">
 

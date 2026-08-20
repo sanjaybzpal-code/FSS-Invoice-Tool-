@@ -39,6 +39,26 @@ app.register_blueprint(accounts_bp)
 app.register_blueprint(ar_bp)
 app.register_blueprint(segment_bp)
 
+
+@app.template_filter("fdate")
+def format_date(value, fmt="%d-%m-%Y"):
+    """Safe date display — datetime or ISO string."""
+    if not value:
+        return ""
+    if hasattr(value, "strftime"):
+        try:
+            return value.strftime(fmt)
+        except Exception:
+            pass
+    s = str(value).strip()
+    if "T" in s:
+        s = s.split("T", 1)[0]
+    parts = s.replace("/", "-").split("-")
+    if len(parts) == 3 and len(parts[0]) == 4:
+        y, m, d = parts
+        return f"{d}-{m}-{y}"
+    return s
+
 try:
     import db as _db
     _db.migrate()

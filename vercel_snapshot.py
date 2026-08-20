@@ -20,10 +20,13 @@ _CACHE: dict[str, list[dict]] | None = None
 def _parse_date(value) -> date | None:
     if not value:
         return None
+    if isinstance(value, datetime):
+        return value.date()
     if isinstance(value, date):
         return value
     s = str(value).strip()
-    for fmt in ("%Y-%m-%d", "%Y-%m-%dT%H:%M:%S", "%Y-%m-%dT%H:%M:%S.%f"):
+    for fmt in ("%Y-%m-%d", "%Y-%m-%dT%H:%M:%S", "%Y-%m-%dT%H:%M:%S.%f",
+                "%d-%m-%Y", "%d/%m/%Y"):
         try:
             return datetime.strptime(s[:26], fmt).date()
         except ValueError:
@@ -34,6 +37,23 @@ def _parse_date(value) -> date | None:
         except ValueError:
             pass
     return None
+
+
+def _coerce_row(row: dict) -> dict:
+    out = dict(row)
+    for k, v in list(out.items()):
+        if v is None:
+            continue
+        if k.endswith("Date") or k.endswith("At"):
+            parsed = _parse_date(v)
+            if parsed:
+                out[k] = parsed
+        elif "Amount" in k:
+            try:
+                out[k] = float(v)
+            except (TypeError, ValueError):
+                out[k] = 0.0
+    return out
 
 
 def _load_overlay() -> dict[str, list[dict]]:
@@ -74,7 +94,7 @@ def _tables() -> dict[str, list[dict]]:
         raw = json.load(fh)
     base = raw.get("tables", {})
     overlay = _load_overlay()
-    _CACHE = {
+    merged = {
         "BusinessSegments": _merge_tables(
             base.get("BusinessSegments", []), overlay.get("BusinessSegments", []), "BusinessSegmentId"),
         "ClientMaster": _merge_tables(
@@ -92,6 +112,8 @@ def _tables() -> dict[str, list[dict]]:
         "ReceiptNonGstAllocations": _merge_tables(
             base.get("ReceiptNonGstAllocations", []), overlay.get("ReceiptNonGstAllocations", []), "AllocationId"),
     }
+    _CACHE = {name: [_coerce_row(r) for r in rows if isinstance(r, dict)]
+              for name, rows in merged.items()}
     return _CACHE
 
 

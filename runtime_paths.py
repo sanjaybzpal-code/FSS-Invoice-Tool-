@@ -5,12 +5,16 @@ from __future__ import annotations
 import os
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-# VERCEL_ENV is set only on Vercel — ignore stray VERCEL=1 on local Windows.
-IS_VERCEL = bool(os.environ.get("VERCEL_ENV"))
 
 
 def is_vercel() -> bool:
-    return IS_VERCEL
+    """True only on Vercel Linux. Never treat a Windows office PC as Vercel."""
+    if os.name == "nt":
+        return False
+    return bool(os.environ.get("VERCEL") or os.environ.get("VERCEL_ENV"))
+
+
+IS_VERCEL = is_vercel()
 
 
 def data_root() -> str:

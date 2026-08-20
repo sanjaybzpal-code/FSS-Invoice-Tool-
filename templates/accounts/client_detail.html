@@ -52,7 +52,7 @@
 
     <tbody>{% for i in invoices %}<tr>
 
-      <td>{{ i.InvoiceDate.strftime('%d-%m-%Y') if i.InvoiceDate else i.InvoiceDate }}</td>
+      <td>{{ i.InvoiceDate | fdate }}</td>
 
       <td>{{ i.InvoiceNumber }}</td><td class="num">{{ "{:,.2f}".format(i.TotalAmount) }}</td>
 
@@ -72,7 +72,7 @@
 
     <tbody>{% for b in non_gst_bills %}<tr>
 
-      <td>{{ b.BillDate.strftime('%d-%m-%Y') if b.BillDate else b.BillDate }}</td>
+      <td>{{ b.BillDate | fdate }}</td>
 
       <td>{{ b.BillNumber }}</td><td>{{ b.Description }}</td>
 
@@ -94,7 +94,7 @@
 
     <tbody>{% for r in receipts %}<tr>
 
-      <td>{{ r.ReceiptDate.strftime('%d-%m-%Y') if r.ReceiptDate else r.ReceiptDate }}</td>
+      <td>{{ r.ReceiptDate | fdate }}</td>
 
       <td><a href="{{ url_for('accounts.receipts', edit=r.ReceiptId) }}">{{ r.ReceiptNumber }}</a></td>
 

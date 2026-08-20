@@ -12,7 +12,9 @@ SQL_DIR = os.path.join(HERE, "database")
 
 
 def _is_vercel() -> bool:
-    return bool(os.environ.get("VERCEL_ENV"))
+    if os.name == "nt":
+        return False
+    return bool(os.environ.get("VERCEL") or os.environ.get("VERCEL_ENV"))
 
 
 def _local_servers() -> set[str]:

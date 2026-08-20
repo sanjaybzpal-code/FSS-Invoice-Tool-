@@ -41,7 +41,7 @@
     <tbody>
       {% for r in receipts %}
       <tr>
-        <td>{{ r.ReceiptDate.strftime('%d-%m-%Y') if r.ReceiptDate else r.ReceiptDate }}</td>
+        <td>{{ r.ReceiptDate | fdate }}</td>
         <td><b>{{ r.ReceiptNumber }}</b></td>
         <td>{{ r.ClientName }}</td>
         <td>{{ r.PaymentMode }}</td>
