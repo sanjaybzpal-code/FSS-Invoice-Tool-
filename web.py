@@ -418,14 +418,16 @@ def api_generate():
 @app.route("/health")
 def health():
     """Simple uptime check for live deployment monitoring."""
-    db_ok = False
+    db_ok, db_msg = False, "not configured"
     try:
         import db as _db
-        ok, _ = _db.test_connection()
-        db_ok = ok
-    except Exception:  # noqa: BLE001
-        pass
-    return jsonify(ok=True, service="FSS Invoice Tool", database=db_ok)
+        if os.environ.get("VERCEL") == "1" and not os.environ.get("AZURE_SQL_HOST"):
+            db_msg = "Set AZURE_SQL_HOST on Vercel"
+        else:
+            db_ok, db_msg = _db.test_connection()
+    except Exception as exc:  # noqa: BLE001
+        db_msg = str(exc)
+    return jsonify(ok=True, service="FSS Invoice Tool", database=db_ok, db_message=db_msg)
 
 
 @app.route("/download/<path:filename>")

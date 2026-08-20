@@ -4,7 +4,7 @@ requires-python = ">=3.12"
 version = "1.0.0"
 
 [tool.vercel]
-entrypoint = "web:app"
+entrypoint = "index:app"
 
 [tool.vercel.scripts]
 build = "python -c \"print('FSS Invoice Tool — Vercel build OK')\""

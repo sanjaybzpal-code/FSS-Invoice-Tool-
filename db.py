@@ -6,14 +6,26 @@ import json
 import os
 import re
 
-import pyodbc
-
 HERE = os.path.dirname(os.path.abspath(__file__))
 CONFIG_PATH = os.path.join(HERE, "config.json")
 SQL_DIR = os.path.join(HERE, "database")
 
 
+def _is_vercel() -> bool:
+    return os.environ.get("VERCEL") == "1"
+
+
+def _import_pyodbc():
+    import pyodbc
+    return pyodbc
+
+
 def load_config() -> dict:
+    if os.environ.get("CONFIG_JSON"):
+        try:
+            return json.loads(os.environ["CONFIG_JSON"])
+        except json.JSONDecodeError:
+            pass
     with open(CONFIG_PATH, "r", encoding="utf-8") as fh:
         return json.load(fh)
 
@@ -47,16 +59,20 @@ def master_connection_string(config: dict | None = None) -> str:
 
 
 def get_connection(config: dict | None = None):
-    """SQL Server — pyodbc locally; pymssql on Vercel (Linux, no ODBC)."""
-    if os.environ.get("VERCEL") == "1" and os.environ.get("AZURE_SQL_HOST"):
+    """SQL Server — pymssql on Vercel; pyodbc on Windows."""
+    if _is_vercel():
+        if not os.environ.get("AZURE_SQL_HOST"):
+            raise RuntimeError(
+                "Set AZURE_SQL_HOST, AZURE_SQL_USER, AZURE_SQL_PASSWORD on Vercel.")
         import pymssql
-        db = (config or load_config()).get("database", {})
+        db_cfg = (config or load_config()).get("database", {})
         return pymssql.connect(
             server=os.environ["AZURE_SQL_HOST"],
-            user=os.environ.get("AZURE_SQL_USER") or db.get("username", ""),
-            password=os.environ.get("AZURE_SQL_PASSWORD") or db.get("password", ""),
-            database=os.environ.get("AZURE_SQL_DATABASE") or db.get("database", "FSSInvoice"),
+            user=os.environ.get("AZURE_SQL_USER") or db_cfg.get("username", ""),
+            password=os.environ.get("AZURE_SQL_PASSWORD") or db_cfg.get("password", ""),
+            database=os.environ.get("AZURE_SQL_DATABASE") or db_cfg.get("database", "FSSInvoice"),
         )
+    pyodbc = _import_pyodbc()
     return pyodbc.connect(connection_string(config), autocommit=False)
 
 
@@ -75,8 +91,11 @@ def _run_sql_file(cursor, path: str) -> None:
 def migrate(config: dict | None = None) -> str:
     """Create database and apply all scripts. Safe to run multiple times."""
     cfg = config or load_config()
-    on_vercel = os.environ.get("VERCEL") == "1"
-    if not on_vercel:
+    if _is_vercel() and not os.environ.get("AZURE_SQL_HOST"):
+        return "Skipped migration on Vercel (no AZURE_SQL_* env)."
+
+    if not _is_vercel():
+        pyodbc = _import_pyodbc()
         with pyodbc.connect(master_connection_string(cfg), autocommit=True) as conn:
             cur = conn.cursor()
             _run_sql_file(cur, os.path.join(SQL_DIR, "01_create_database.sql"))
