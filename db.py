@@ -19,6 +19,9 @@ def load_config() -> dict:
 
 
 def connection_string(config: dict | None = None) -> str:
+    env_cs = os.environ.get("AZURE_SQL_CONNECTION_STRING") or os.environ.get("SQL_CONNECTION_STRING")
+    if env_cs:
+        return env_cs.strip()
     db = (config or load_config()).get("database", {})
     driver = db.get("driver", "ODBC Driver 17 for SQL Server")
     server = db.get("server", "(local)")
@@ -43,7 +46,17 @@ def master_connection_string(config: dict | None = None) -> str:
     )
 
 
-def get_connection(config: dict | None = None) -> pyodbc.Connection:
+def get_connection(config: dict | None = None):
+    """SQL Server — pyodbc locally; pymssql on Vercel (Linux, no ODBC)."""
+    if os.environ.get("VERCEL") == "1" and os.environ.get("AZURE_SQL_HOST"):
+        import pymssql
+        db = (config or load_config()).get("database", {})
+        return pymssql.connect(
+            server=os.environ["AZURE_SQL_HOST"],
+            user=os.environ.get("AZURE_SQL_USER") or db.get("username", ""),
+            password=os.environ.get("AZURE_SQL_PASSWORD") or db.get("password", ""),
+            database=os.environ.get("AZURE_SQL_DATABASE") or db.get("database", "FSSInvoice"),
+        )
     return pyodbc.connect(connection_string(config), autocommit=False)
 
 
@@ -62,18 +75,19 @@ def _run_sql_file(cursor, path: str) -> None:
 def migrate(config: dict | None = None) -> str:
     """Create database and apply all scripts. Safe to run multiple times."""
     cfg = config or load_config()
-    # Create database on master
-    with pyodbc.connect(master_connection_string(cfg), autocommit=True) as conn:
-        cur = conn.cursor()
-        _run_sql_file(cur, os.path.join(SQL_DIR, "01_create_database.sql"))
+    on_vercel = os.environ.get("VERCEL") == "1"
+    if not on_vercel:
+        with pyodbc.connect(master_connection_string(cfg), autocommit=True) as conn:
+            cur = conn.cursor()
+            _run_sql_file(cur, os.path.join(SQL_DIR, "01_create_database.sql"))
 
-  # Apply schema on FSSInvoice
+    scripts = ("02_tables.sql", "03_views.sql", "04_stored_procedures.sql",
+               "05_ar_extensions.sql", "06_ar_views.sql", "07_ar_stored_procedures.sql",
+               "09_segments_expenses.sql", "10_segment_views.sql",
+               "11_non_gst_bills.sql", "12_receipts_proforma.sql")
     with get_connection(cfg) as conn:
         cur = conn.cursor()
-        for name in ("02_tables.sql", "03_views.sql", "04_stored_procedures.sql",
-                     "05_ar_extensions.sql", "06_ar_views.sql", "07_ar_stored_procedures.sql",
-                     "09_segments_expenses.sql", "10_segment_views.sql",
-                     "11_non_gst_bills.sql", "12_receipts_proforma.sql"):
+        for name in scripts:
             _run_sql_file(cur, os.path.join(SQL_DIR, name))
             conn.commit()
     return "Database migrated successfully."

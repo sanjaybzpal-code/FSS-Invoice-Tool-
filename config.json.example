@@ -1,0 +1,54 @@
+# Copy this file to config.json and edit for your company.
+{
+    "seller": {
+        "name": "Your Company Name",
+        "address_line1": "Address line 1",
+        "address_line2": "City - PIN",
+        "mobile": "9999999999",
+        "email": "accounts@yourcompany.com",
+        "gstin": "27XXXXXXXXXX1Z5",
+        "state": "Maharashtra",
+        "bank_name": "Bank Name",
+        "bank_branch": "Branch",
+        "bank_ifsc": "IFSC0000000",
+        "bank_account": "0000000000",
+        "stamp_image": "assets\\stamp.png"
+    },
+    "tax": {
+        "cgst_rate": 9.0,
+        "sgst_rate": 9.0,
+        "igst_rate": 18.0
+    },
+    "invoice": {
+        "next_number": 1,
+        "number_prefix": "",
+        "date_format": "%d-%m-%Y"
+    },
+    "server": {
+        "host": "0.0.0.0",
+        "port": 5000
+    },
+    "database": {
+        "driver": "ODBC Driver 17 for SQL Server",
+        "server": "(local)",
+        "database": "FSSInvoice",
+        "trusted_connection": true
+    },
+    "paths": {
+        "clients_workbook": "..\\CLIENTS LIST.xlsx",
+        "clients_sheet": "CLIENTS ",
+        "output_folder": "Invoices"
+    },
+    "email": {
+        "smtp_host": "",
+        "smtp_port": 587,
+        "smtp_user": "",
+        "smtp_password": "",
+        "from_address": "accounts@yourcompany.com",
+        "use_tls": true
+    },
+    "reminders": {
+        "payment_terms_days": 30,
+        "enabled": true
+    }
+}

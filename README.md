@@ -22,6 +22,16 @@ Backed by **SQL Server** (`FSSInvoice` database).
 4. **First login:** create your username & password on the setup screen
 5. **Network (team):** run `Allow on Network (Run as Admin).bat`, share URL from `Show Network Address.bat`
 
+### Go live (24/7)
+
+| Goal | What to run |
+|------|-------------|
+| **Office team (same Wi‑Fi/LAN)** | `Go Live.bat` → share `http://YOUR-PC-IP:5000` |
+| **Always on after PC restart** | `Go Live.bat` (creates Windows startup task) |
+| **Internet (work from home)** | Keep server running + `Go Live - Internet (Cloudflare).bat` |
+
+Production server uses **Waitress** (`run_live.py`), not the Flask debug server.
+
 ---
 
 ## Main screens

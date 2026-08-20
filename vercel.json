@@ -1,0 +1,9 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "functions": {
+    "web.py": {
+      "maxDuration": 60,
+      "excludeFiles": "{Invoices/**,Exports/**,temp_imports/**,logs/**,*.bat,*.ps1,*.pyw,app.py,**/__pycache__/**,**/*.pdf,**/*.xlsx,auth.json,.secret_key}"
+    }
+  }
+}

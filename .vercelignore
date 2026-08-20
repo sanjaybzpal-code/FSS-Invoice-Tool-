@@ -1,0 +1,12 @@
+Invoices/
+Exports/
+temp_imports/
+logs/
+.git/
+*.bat
+*.ps1
+*.pyw
+auth.json
+.secret_key
+clients_cache.json
+invoices_log.json

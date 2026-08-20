@@ -28,6 +28,8 @@ from generator import generate_invoice
 from pdf_generator import generate_pdf_invoice
 from invoice_core import compute_totals, next_invoice_number, record_invoice
 
+import runtime_paths as rp
+
 HERE = os.path.dirname(os.path.abspath(__file__))
 CONFIG_PATH = os.path.join(HERE, "config.json")
 
@@ -66,8 +68,16 @@ def inject_globals():
 
 
 def load_config() -> dict:
+    if os.environ.get("CONFIG_JSON"):
+        try:
+            return json.loads(os.environ["CONFIG_JSON"])
+        except json.JSONDecodeError:
+            pass
     with open(CONFIG_PATH, "r", encoding="utf-8") as fh:
-        return json.load(fh)
+        cfg = json.load(fh)
+    if os.environ.get("VERCEL") == "1":
+        cfg.setdefault("paths", {})["output_folder"] = rp.invoices_dir()
+    return cfg
 
 
 def save_config(config: dict) -> None:
@@ -403,6 +413,19 @@ def api_generate():
                    supply_type=totals.supply_type,
                    document_type=document_type,
                    next_number=next_num)
+
+
+@app.route("/health")
+def health():
+    """Simple uptime check for live deployment monitoring."""
+    db_ok = False
+    try:
+        import db as _db
+        ok, _ = _db.test_connection()
+        db_ok = ok
+    except Exception:  # noqa: BLE001
+        pass
+    return jsonify(ok=True, service="FSS Invoice Tool", database=db_ok)
 
 
 @app.route("/download/<path:filename>")

@@ -10,9 +10,11 @@ import secrets
 from flask import redirect, session, url_for
 from werkzeug.security import check_password_hash, generate_password_hash
 
+import runtime_paths as rp
+
 HERE = os.path.dirname(os.path.abspath(__file__))
-AUTH_FILE = os.path.join(HERE, "auth.json")
-SECRET_FILE = os.path.join(HERE, ".secret_key")
+AUTH_FILE = os.path.join(rp.data_root(), "auth.json")
+SECRET_FILE = os.path.join(rp.data_root(), ".secret_key")
 
 ROLE_ADMIN = "admin"
 ROLE_ACCOUNTS = "accounts"
@@ -139,6 +141,9 @@ def role_required(*roles):
 
 
 def get_secret_key() -> str:
+    env_key = os.environ.get("FLASK_SECRET_KEY") or os.environ.get("SECRET_KEY")
+    if env_key:
+        return env_key.strip()
     if os.path.exists(SECRET_FILE):
         try:
             with open(SECRET_FILE, "r", encoding="utf-8") as fh:
@@ -173,13 +178,30 @@ def _migrate(data: dict) -> dict:
 
 
 def _load() -> dict:
-    if not os.path.exists(AUTH_FILE):
-        return {}
-    try:
-        with open(AUTH_FILE, "r", encoding="utf-8") as fh:
-            return _migrate(json.load(fh))
-    except (OSError, json.JSONDecodeError):
-        return {}
+    if os.environ.get("AUTH_JSON"):
+        try:
+            return _migrate(json.loads(os.environ["AUTH_JSON"]))
+        except (json.JSONDecodeError, TypeError):
+            pass
+    if os.path.exists(AUTH_FILE):
+        try:
+            with open(AUTH_FILE, "r", encoding="utf-8") as fh:
+                return _migrate(json.load(fh))
+        except (OSError, json.JSONDecodeError):
+            pass
+    # Vercel bootstrap — admin from environment variables
+    admin_user = (os.environ.get("ADMIN_USERNAME") or "").strip()
+    admin_pass = os.environ.get("ADMIN_PASSWORD") or ""
+    if admin_user and admin_pass:
+        return _migrate({
+            "users": {
+                admin_user: {
+                    "hash": generate_password_hash(admin_pass),
+                    "role": ROLE_ADMIN,
+                }
+            }
+        })
+    return {}
 
 
 def _save(data: dict) -> None:
