@@ -1,0 +1,333 @@
+{% extends "accounts/layout.html" %}
+{% block title %}Review Bank Statement{% endblock %}
+{% block content %}
+<style>
+:root{--ok:#16a34a;--warn:#d97706;--err:#dc2626;--ok-bg:#f0fdf4;--warn-bg:#fffbeb;--err-bg:#fef2f2}
+.summary-bar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;align-items:center}
+.sstat{border-radius:10px;padding:10px 18px;font-size:13px;font-weight:700;display:flex;align-items:center;gap:6px}
+.sstat.all {background:#eff6ff;color:var(--navy)}
+.sstat.ok  {background:var(--ok-bg);color:var(--ok)}
+.sstat.dup {background:var(--warn-bg);color:var(--warn)}
+.sstat.unm {background:var(--err-bg);color:var(--err)}
+.filter-row{display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap}
+.fbtn{border:1px solid var(--line);background:#fff;border-radius:20px;padding:5px 14px;
+      font-size:12px;font-weight:600;cursor:pointer;transition:.15s;color:var(--navy)}
+.fbtn.active,.fbtn:hover{background:var(--navy);color:#fff;border-color:var(--navy)}
+.preview-tbl{width:100%;border-collapse:collapse;font-size:12.5px}
+.preview-tbl th{background:var(--navy);color:#fff;padding:8px 6px;font-size:11px;white-space:nowrap;position:sticky;top:0;z-index:2}
+.preview-tbl td{padding:6px 5px;border-bottom:1px solid #eee;vertical-align:middle}
+.preview-tbl tr.row-ok  {background:#fff}
+.preview-tbl tr.row-dup {background:var(--warn-bg)}
+.preview-tbl tr.row-unm {background:var(--err-bg)}
+.preview-tbl tr.row-skip td{opacity:.4}
+.badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700}
+.badge-ok {background:var(--ok-bg);color:var(--ok)}
+.badge-dup{background:var(--warn-bg);color:var(--warn)}
+.badge-unm{background:var(--err-bg);color:var(--err)}
+.preview-tbl input[type=text],.preview-tbl input[type=number],.preview-tbl select{
+  width:100%;padding:4px 6px;border:1px solid #d1d5db;border-radius:5px;font-size:12px}
+.preview-tbl input[type=number]{text-align:right}
+.narr-cell{max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:help}
+.conf-badge{font-size:9px;padding:1px 5px;border-radius:8px;margin-left:3px;font-weight:700}
+.conf-high{background:#dcfce7;color:#15803d}
+.conf-med {background:#fef9c3;color:#854d0e}
+.conf-low {background:#fee2e2;color:#991b1b}
+.import-chk{width:16px;height:16px;cursor:pointer;accent-color:var(--navy)}
+.calc-row{display:flex;gap:4px;align-items:center}
+.calc-lbl{font-size:10px;color:var(--muted);white-space:nowrap}
+.tds-amt,.gst-amt,.inv-amt{font-weight:600;font-size:12px;color:var(--navy)}
+.sticky-footer{position:sticky;bottom:0;background:#fff;border-top:2px solid var(--line);
+               padding:12px 20px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;z-index:10}
+.counter-box{font-size:14px;font-weight:700;color:var(--navy)}
+.scroll-wrap{overflow-x:auto;max-height:65vh;overflow-y:auto;border:1px solid var(--line);border-radius:10px}
+.gst-paid-toggle{display:flex;gap:4px}
+.gst-paid-toggle label{font-size:11px;padding:3px 8px;border:1px solid #d1d5db;border-radius:5px;
+                        cursor:pointer;font-weight:600}
+.gst-paid-toggle input{display:none}
+.gst-paid-toggle input:checked + label{background:var(--navy);color:#fff;border-color:var(--navy)}
+</style>
+
+<!-- Summary bar -->
+<div class="summary-bar">
+  <span style="font-size:14px;font-weight:700;color:var(--navy)">
+    🏦 {{ bank_name }} &nbsp;·&nbsp; {{ filename }}
+  </span>
+  <span class="sstat all">📋 {{ rows|length }} transactions</span>
+  <span class="sstat ok">✅ {{ rows|length - dup_count - unmatched }} ready</span>
+  {% if dup_count %}<span class="sstat dup">⚠️ {{ dup_count }} duplicate(s)</span>{% endif %}
+  {% if unmatched %}<span class="sstat unm">❌ {{ unmatched }} unmatched</span>{% endif %}
+  <span id="willImport" class="sstat ok" style="margin-left:auto"></span>
+</div>
+
+<!-- Filters -->
+<div class="filter-row">
+  <button class="fbtn active" onclick="filter('all',this)">All</button>
+  <button class="fbtn" onclick="filter('ok',this)">Matched</button>
+  <button class="fbtn" onclick="filter('dup',this)">Duplicates</button>
+  <button class="fbtn" onclick="filter('unm',this)">Unmatched</button>
+  <button class="fbtn" style="margin-left:auto" onclick="selectAll(true)">✓ Select All</button>
+  <button class="fbtn" onclick="selectAll(false)">✗ Deselect All</button>
+</div>
+
+<form method="post" action="{{ url_for('accounts.bank_import_confirm') }}" id="confirmForm">
+  <input type="hidden" name="token" value="{{ token }}">
+  <input type="hidden" name="filename" value="{{ filename }}">
+  <input type="hidden" name="bank_name" value="{{ bank_name }}">
+  <input type="hidden" name="row_count" value="{{ rows|length }}">
+
+  <div class="scroll-wrap">
+  <table class="preview-tbl">
+    <thead>
+      <tr>
+        <th style="width:30px">✓</th>
+        <th>Status</th>
+        <th style="width:88px">Date</th>
+        <th>Narration</th>
+        <th style="width:90px">Reference / UTR</th>
+        <th style="width:90px;text-align:right">Bank Credit ₹</th>
+        <th style="width:160px">Client</th>
+        <th style="width:60px">TDS %</th>
+        <th style="width:80px;text-align:right">TDS Amt ₹</th>
+        <th style="width:60px">GST Paid?</th>
+        <th style="width:55px">GST %</th>
+        <th style="width:80px;text-align:right">GST Amt ₹</th>
+        <th style="width:90px;text-align:right">Taxable ₹</th>
+        <th style="width:90px;text-align:right">Invoice Total ₹</th>
+        <th style="width:80px">Mode</th>
+      </tr>
+    </thead>
+    <tbody>
+    {% for row in rows %}
+    {% set idx = loop.index0 %}
+    {% set is_dup = row.is_duplicate %}
+    {% set is_unm = not row.matched_client_id %}
+    {% set row_cls = 'row-dup' if is_dup else ('row-unm' if is_unm else 'row-ok') %}
+    {% set badge_cls = 'badge-dup' if is_dup else ('badge-unm' if is_unm else 'badge-ok') %}
+    {% set badge_txt = '⚠ Dup' if is_dup else ('✗ Unmatched' if is_unm else '✓ Ready') %}
+    <tr class="{{ row_cls }} data-row" data-status="{{ 'dup' if is_dup else ('unm' if is_unm else 'ok') }}"
+        id="row_{{ idx }}">
+      <td style="text-align:center">
+        <input type="checkbox" class="import-chk" name="import_{{ idx }}"
+               id="chk_{{ idx }}" onchange="rowToggle({{ idx }},this.checked)"
+               {% if not is_dup %}checked{% endif %}>
+      </td>
+      <td>
+        <span class="badge {{ badge_cls }}">{{ badge_txt }}</span>
+        {% if is_dup %}
+          <br><span style="font-size:10px;color:var(--muted)">{{ row.duplicate_receipt_no }}</span>
+        {% endif %}
+      </td>
+      <td>
+        <input type="text" name="date_{{ idx }}" value="{{ row.date }}"
+               style="width:85px" class="date-inp">
+      </td>
+      <td>
+        <span class="narr-cell" title="{{ row.narration }}">{{ row.narration }}</span>
+      </td>
+      <td>
+        <input type="text" name="ref_{{ idx }}" value="{{ row.reference }}"
+               style="width:88px" placeholder="UTR/Ref">
+      </td>
+      <td style="text-align:right">
+        <input type="number" name="amount_{{ idx }}" id="amt_{{ idx }}"
+               value="{{ '%.2f'|format(row.amount) }}" step="0.01" min="0"
+               style="width:88px;text-align:right" oninput="recalc({{ idx }})">
+      </td>
+      <td>
+        <select name="client_id_{{ idx }}" id="cli_{{ idx }}" style="min-width:150px">
+          <option value="">— Select Client —</option>
+          {% for c in clients %}
+          <option value="{{ c.ClientId }}"
+            {% if c.ClientId == row.matched_client_id %}selected{% endif %}>
+            {{ c.ClientName }}
+          </option>
+          {% endfor %}
+        </select>
+        {% if row.match_score >= 30 %}
+          <span class="conf-badge conf-{{ row.confidence }}">{{ row.match_score }}% match</span>
+        {% endif %}
+      </td>
+      <!-- TDS -->
+      <td>
+        <select name="tds_pct_{{ idx }}" id="tds_{{ idx }}"
+                onchange="recalc({{ idx }})" style="width:58px">
+          {% for r in [0,2,5,7.5,10,20] %}
+          <option value="{{ r }}" {% if (row.tds_pct or 0)|round(1) == r %}selected{% endif %}>
+            {{ r }}%
+          </option>
+          {% endfor %}
+        </select>
+      </td>
+      <td style="text-align:right">
+        <span class="tds-amt" id="tds_amt_{{ idx }}">0.00</span>
+      </td>
+      <!-- GST Paid -->
+      <td style="text-align:center">
+        <div class="gst-paid-toggle">
+          <input type="radio" name="gst_paid_{{ idx }}" id="gp1_{{ idx }}" value="1"
+                 {% if row.gst_paid %}checked{% endif %} onchange="recalc({{ idx }})">
+          <label for="gp1_{{ idx }}">Y</label>
+          <input type="radio" name="gst_paid_{{ idx }}" id="gp0_{{ idx }}" value="0"
+                 {% if not row.gst_paid %}checked{% endif %} onchange="recalc({{ idx }})">
+          <label for="gp0_{{ idx }}">N</label>
+        </div>
+        <!-- hidden field for actual value -->
+        <input type="hidden" name="gst_paid_{{ idx }}" id="gst_paid_h_{{ idx }}"
+               value="{{ '1' if row.gst_paid else '0' }}">
+      </td>
+      <td>
+        <select name="gst_rate_{{ idx }}" id="gst_rate_{{ idx }}"
+                onchange="recalc({{ idx }})" style="width:52px">
+          {% for r in [0,5,12,18,28] %}
+          <option value="{{ r }}" {% if (row.gst_rate or 18)|int == r %}selected{% endif %}>
+            {{ r }}%
+          </option>
+          {% endfor %}
+        </select>
+      </td>
+      <td style="text-align:right">
+        <span class="gst-amt" id="gst_amt_{{ idx }}">0.00</span>
+      </td>
+      <td style="text-align:right">
+        <input type="number" name="taxable_{{ idx }}" id="taxable_{{ idx }}"
+               value="{{ '%.2f'|format(row.taxable or row.amount) }}"
+               step="0.01" min="0" style="width:86px;text-align:right"
+               oninput="taxableChanged({{ idx }})">
+      </td>
+      <td style="text-align:right">
+        <span class="inv-amt" id="inv_total_{{ idx }}">0.00</span>
+      </td>
+      <td>
+        <select name="pmode_{{ idx }}" style="width:76px">
+          {% for m in ['NEFT','RTGS','IMPS','UPI','Cheque','Cash','Other'] %}
+          {% set sel = 'selected' if m.upper() in (row.reference|upper or row.narration|upper) else '' %}
+          <option {{ 'selected' if loop.first else '' }}>{{ m }}</option>
+          {% endfor %}
+        </select>
+      </td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+
+  <!-- Sticky footer -->
+  <div class="sticky-footer">
+    <span class="counter-box" id="importCounter">0 receipts will be created</span>
+    <button type="submit" class="btn primary" id="confirmBtn" onclick="return beforeSubmit()">
+      ✅ Confirm &amp; Create Receipts
+    </button>
+    <a class="btn ghost" href="{{ url_for('accounts.bank_import') }}">← Re-upload</a>
+    <a class="btn ghost" href="{{ url_for('accounts.receipts') }}">Cancel</a>
+  </div>
+</form>
+
+<script>
+// ── Recalculation ─────────────────────────────────────────────────────────────
+function fmt(n) { return parseFloat(n).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+function gv(id) { return parseFloat(document.getElementById(id)?.value || 0) || 0; }
+
+function recalc(idx) {
+  const amount   = gv(`amt_${idx}`);            // bank credit (fixed)
+  const tds_pct  = gv(`tds_${idx}`);
+  const gst_rate = gv(`gst_rate_${idx}`);
+  const gst_paid = document.querySelector(`input[name="gst_paid_${idx}"]:checked`)?.value === '1';
+
+  // Update hidden field
+  const hf = document.getElementById(`gst_paid_h_${idx}`);
+  if (hf) hf.value = gst_paid ? '1' : '0';
+
+  let taxable;
+  // Indian formula: received = taxable*(1 + gst_rate/100 - tds_pct/100)  [gst paid]
+  //                 received = taxable*(1 - tds_pct/100)                  [gst not paid]
+  const divisor = gst_paid
+    ? (1 + gst_rate/100 - tds_pct/100)
+    : (1 - tds_pct/100);
+
+  taxable = divisor > 0.001 ? amount / divisor : amount;
+  taxable = Math.round(taxable * 100) / 100;
+
+  const tds_amt  = Math.round(taxable * tds_pct / 100 * 100) / 100;
+  const gst_amt  = gst_paid ? Math.round(taxable * gst_rate / 100 * 100) / 100 : 0;
+  const inv_total = Math.round((taxable + gst_amt) * 100) / 100;
+
+  // Update displayed values
+  document.getElementById(`tds_amt_${idx}`).textContent = fmt(tds_amt);
+  document.getElementById(`gst_amt_${idx}`).textContent = fmt(gst_amt);
+  document.getElementById(`inv_total_${idx}`).textContent = fmt(inv_total);
+  // Update taxable input (only if not manually edited)
+  const tx = document.getElementById(`taxable_${idx}`);
+  if (tx && !tx.dataset.manual) tx.value = taxable.toFixed(2);
+}
+
+function taxableChanged(idx) {
+  // User manually edited taxable — mark it and recalc derived fields
+  const tx = document.getElementById(`taxable_${idx}`);
+  tx.dataset.manual = '1';
+  const taxable  = gv(`taxable_${idx}`);
+  const tds_pct  = gv(`tds_${idx}`);
+  const gst_rate = gv(`gst_rate_${idx}`);
+  const gst_paid = document.querySelector(`input[name="gst_paid_${idx}"]:checked`)?.value === '1';
+  const tds_amt  = Math.round(taxable * tds_pct / 100 * 100) / 100;
+  const gst_amt  = gst_paid ? Math.round(taxable * gst_rate / 100 * 100) / 100 : 0;
+  const inv_total = taxable + gst_amt;
+  document.getElementById(`tds_amt_${idx}`).textContent = fmt(tds_amt);
+  document.getElementById(`gst_amt_${idx}`).textContent = fmt(gst_amt);
+  document.getElementById(`inv_total_${idx}`).textContent = fmt(inv_total);
+}
+
+// ── Checkbox / counter ────────────────────────────────────────────────────────
+function rowToggle(idx, checked) {
+  const tr = document.getElementById(`row_${idx}`);
+  if (checked) { tr.classList.remove('row-skip'); }
+  else         { tr.classList.add('row-skip'); }
+  updateCounter();
+}
+
+function updateCounter() {
+  const total = document.querySelectorAll('.import-chk:checked').length;
+  document.getElementById('importCounter').textContent =
+    total ? `${total} receipt(s) will be created` : 'Nothing selected';
+  document.getElementById('confirmBtn').disabled = total === 0;
+  document.getElementById('willImport').textContent = `🟢 ${total} to import`;
+}
+
+function selectAll(val) {
+  document.querySelectorAll('.import-chk').forEach(c => {
+    if (c.closest('tr').style.display !== 'none') { c.checked = val; rowToggle(parseInt(c.id.split('_')[1]), val); }
+  });
+  updateCounter();
+}
+
+// ── Filter ────────────────────────────────────────────────────────────────────
+function filter(type, btn) {
+  document.querySelectorAll('.fbtn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.querySelectorAll('.data-row').forEach(tr => {
+    const st = tr.dataset.status;
+    tr.style.display = (type === 'all' || st === type) ? '' : 'none';
+  });
+}
+
+function beforeSubmit() {
+  const n = document.querySelectorAll('.import-chk:checked').length;
+  if (!n) { alert('No rows selected to import.'); return false; }
+  return confirm(`Create ${n} receipt(s) from this bank statement?`);
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  // Sync all gst_paid radio → hidden field
+  document.querySelectorAll('input[type=radio]').forEach(r => {
+    r.addEventListener('change', () => {
+      const idx = r.name.replace('gst_paid_','');
+      const hf = document.getElementById(`gst_paid_h_${idx}`);
+      if (hf) hf.value = r.value;
+    });
+  });
+  // Initial recalc for all rows
+  {% for row in rows %}recalc({{ loop.index0 }});{% endfor %}
+  updateCounter();
+});
+</script>
+{% endblock %}

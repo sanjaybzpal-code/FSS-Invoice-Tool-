@@ -1,0 +1,43 @@
+{% extends "accounts/layout.html" %}
+{% block title %}Ageing Analysis{% endblock %}
+{% block content %}
+<div class="card">
+  <h2>Ageing Summary</h2>
+  <table>
+    <thead><tr><th>Bucket</th><th>Invoices</th><th>Pending Amount</th></tr></thead>
+    <tbody>
+      {% for b in buckets %}
+      <tr>
+        <td><b>{{ b.AgeBucket }}</b></td>
+        <td class="num">{{ b.InvoiceCount }}</td>
+        <td class="num out-pos">₹ {{ "{:,.2f}".format(b.PendingAmount or 0) }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="3">No pending invoices.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+<div class="card">
+  <h2>Invoice-wise Ageing Detail</h2>
+  <table>
+    <thead><tr><th>Client</th><th>Invoice</th><th>Date</th><th>Total</th><th>Paid</th><th>Pending</th><th>Days</th><th>Bucket</th></tr></thead>
+    <tbody>
+      {% for d in detail %}
+      <tr>
+        <td>{{ d.ClientName }}</td>
+        <td>{{ d.InvoiceNumber }}</td>
+        <td>{{ d.InvoiceDate.strftime('%d-%m-%Y') if d.InvoiceDate else d.InvoiceDate }}</td>
+        <td class="num">{{ "{:,.2f}".format(d.TotalAmount) }}</td>
+        <td class="num">{{ "{:,.2f}".format(d.PaidAmount or 0) }}</td>
+        <td class="num out-pos">{{ "{:,.2f}".format(d.PendingAmount or 0) }}</td>
+        <td class="num">{{ d.AgeDays }}</td>
+        <td>{{ d.AgeBucket }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="8">No ageing data.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

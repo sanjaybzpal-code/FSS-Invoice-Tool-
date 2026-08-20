@@ -1,0 +1,53 @@
+{
+    "seller": {
+        "name": "Façade Structural Services",
+        "address_line1": "004, 1st Floor, Krishnadham",
+        "address_line2": "Ramdev Park Road, Mira Road - 401107",
+        "mobile": "7977654966",
+        "email": "accounts@facadestructuralservices.com",
+        "gstin": "27BSQPP8837F1ZZ",
+        "state": "Maharashtra",
+        "bank_name": "Indian Bank",
+        "bank_branch": "Goregaon (E)",
+        "bank_ifsc": "IDIB000G105",
+        "bank_account": "6856823198",
+        "stamp_image": "assets\\stamp.png"
+    },
+    "tax": {
+        "cgst_rate": 9.0,
+        "sgst_rate": 9.0,
+        "igst_rate": 18.0
+    },
+    "invoice": {
+        "next_number": 34,
+        "number_prefix": "",
+        "date_format": "%d-%m-%Y"
+    },
+    "server": {
+        "host": "0.0.0.0",
+        "port": 5000
+    },
+    "database": {
+        "driver": "ODBC Driver 17 for SQL Server",
+        "server": "(local)",
+        "database": "FSSInvoice",
+        "trusted_connection": true
+    },
+    "paths": {
+        "clients_workbook": "..\\FSS PROJECT SHEETS - CLIENTS LIST.xlsx",
+        "clients_sheet": "CLIENTS ",
+        "output_folder": "Invoices"
+    },
+    "email": {
+        "smtp_host": "",
+        "smtp_port": 587,
+        "smtp_user": "",
+        "smtp_password": "",
+        "from_address": "accounts@facadestructuralservices.com",
+        "use_tls": true
+    },
+    "reminders": {
+        "payment_terms_days": 30,
+        "enabled": true
+    }
+}

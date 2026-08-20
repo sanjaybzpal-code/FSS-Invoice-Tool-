@@ -1,0 +1,173 @@
+{% extends "accounts/layout.html" %}
+
+{% block title %}Invoice Archive{% endblock %}
+
+{% block content %}
+
+<div class="card">
+
+  <h2>Invoice Archive</h2>
+
+  <p style="font-size:13px;color:var(--muted);margin:0 0 14px">
+
+    Every generated invoice is saved permanently in the <b>Invoices</b> folder and linked here.
+
+    Download PDF or Excel anytime. Use <b>Edit</b> to correct segment tagging errors.
+
+  </p>
+
+  <form method="get" style="margin-bottom:14px;display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end">
+
+    <div><label>Search</label>
+
+      <input name="q" value="{{ search_q }}" placeholder="Invoice no. or client name" style="min-width:200px"></div>
+
+    <div><label>Client</label>
+
+    <select name="client_id">
+
+      <option value="">All clients</option>
+
+      {% for c in clients %}
+
+      <option value="{{ c.ClientId }}" {% if client_id==c.ClientId %}selected{% endif %}>{{ c.ClientName }}</option>
+
+      {% endfor %}
+
+    </select></div>
+
+    {% if not user_segment_id %}
+
+    <div><label>Segment</label>
+
+    <select name="segment_id">
+
+      <option value="">All segments</option>
+
+      {% for s in segments %}
+
+      <option value="{{ s.BusinessSegmentId }}" {% if segment_id==s.BusinessSegmentId %}selected{% endif %}>{{ s.BusinessSegmentName }}</option>
+
+      {% endfor %}
+
+    </select></div>
+
+    {% endif %}
+
+    <button class="btn primary" type="submit">Filter</button>
+
+    <a class="btn ghost" href="{{ url_for('accounts.invoices') }}">Clear</a>
+
+  </form>
+
+  {% if archive_path %}
+
+  <p class="small" style="font-size:12px;color:var(--muted);margin-bottom:12px">
+
+    Storage folder: <code>{{ archive_path }}</code>
+
+  </p>
+
+  {% endif %}
+
+  <table>
+
+    <thead>
+
+      <tr>
+
+        <th>Date</th>
+
+        <th>Invoice No.</th>
+
+        <th>Type</th>
+
+        <th>Client</th>
+
+        <th>Segment</th>
+
+        <th>Total</th>
+
+        <th>Actions</th>
+
+      </tr>
+
+    </thead>
+
+    <tbody>
+
+      {% for i in invoices %}
+
+      <tr>
+
+        <td>{{ i.InvoiceDate.strftime('%d-%m-%Y') if i.InvoiceDate else i.InvoiceDate }}</td>
+
+        <td><b>{{ i.InvoiceNumber }}</b></td>
+
+        <td>{% if (i.InvoiceType or 'TAX') == 'PROFORMA' %}
+          <span style="background:#fef3e7;color:#b45309;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:700">PROFORMA</span>
+          {% else %}<span style="color:#1a7f47;font-size:12px">Tax</span>{% endif %}</td>
+
+        <td><a href="{{ url_for('accounts.client_detail', client_id=i.ClientId) }}">{{ i.ClientName }}</a></td>
+
+        <td>{{ i.BusinessSegmentName or '-' }}</td>
+
+        <td class="num"><b>₹ {{ "{:,.2f}".format(i.TotalAmount) }}</b></td>
+
+        <td style="white-space:nowrap">
+
+          {% if i.has_pdf %}
+
+          <a class="btn primary" style="padding:5px 10px;font-size:12px"
+
+             href="{{ url_for('accounts.invoice_download', invoice_id=i.InvoiceId, fmt='pdf') }}">PDF</a>
+
+          {% endif %}
+
+          {% if i.has_excel %}
+
+          <a class="btn ghost" style="padding:5px 10px;font-size:12px"
+
+             href="{{ url_for('accounts.invoice_download', invoice_id=i.InvoiceId, fmt='excel') }}">Excel</a>
+
+          {% endif %}
+
+          {% if can_edit_invoices %}
+
+          <a class="btn ghost" style="padding:5px 10px;font-size:12px"
+
+             href="{{ url_for('accounts.invoice_edit', invoice_id=i.InvoiceId) }}">Edit</a>
+
+          {% if (i.InvoiceType or 'TAX') == 'PROFORMA' %}
+          <form method="post" action="{{ url_for('accounts.invoice_convert_to_tax', invoice_id=i.InvoiceId) }}"
+                style="display:inline" onsubmit="return confirm('Convert to Tax Invoice? This posts to ledger & GST.');">
+            <button class="btn primary" style="padding:5px 10px;font-size:12px" type="submit">→ Tax Invoice</button>
+          </form>
+          {% endif %}
+
+          {% endif %}
+
+          {% if not i.has_pdf and not i.has_excel %}
+
+          <span style="font-size:12px;color:var(--muted)">File missing</span>
+
+          {% endif %}
+
+        </td>
+
+      </tr>
+
+      {% else %}
+
+      <tr><td colspan="7">No invoices yet.</td></tr>
+
+      {% endfor %}
+
+    </tbody>
+
+  </table>
+
+</div>
+
+{% endblock %}
+

@@ -1,0 +1,46 @@
+{% extends "accounts/layout.html" %}
+{% block title %}TDS Tracking{% endblock %}
+{% block content %}
+<div class="cards">
+  <div class="stat"><div class="lbl">Total TDS Deducted</div><div class="val">₹ {{ "{:,.2f}".format(dash.get('TotalTds') or 0) }}</div></div>
+  <div class="stat"><div class="lbl">TDS Pending Certificate</div><div class="val out-pos">₹ {{ "{:,.2f}".format(dash.get('TdsPendingCert') or 0) }}</div></div>
+</div>
+<div class="card">
+  <h2>Client-wise TDS Summary</h2>
+  <table>
+    <thead><tr><th>Client</th><th>FY</th><th>Total TDS</th><th>Certified</th><th>Pending Cert</th></tr></thead>
+    <tbody>
+      {% for r in summary %}
+      <tr>
+        <td>{{ r.ClientName }}</td><td>{{ r.FinancialYear }}</td>
+        <td class="num">{{ "{:,.2f}".format(r.TotalTds) }}</td>
+        <td class="num">{{ "{:,.2f}".format(r.TdsCertified) }}</td>
+        <td class="num out-pos">{{ "{:,.2f}".format(r.TdsPendingCert) }}</td>
+      </tr>
+      {% else %}<tr><td colspan="5">No TDS recorded.</td></tr>{% endfor %}
+    </tbody>
+  </table>
+</div>
+<div class="card">
+  <h2>Pending TDS Certificates</h2>
+  <table>
+    <thead><tr><th>Receipt</th><th>Client</th><th>Date</th><th>TDS Amt</th><th>Action</th></tr></thead>
+    <tbody>
+      {% for p in pending %}
+      <tr>
+        <td>{{ p.ReceiptNumber }}</td><td>{{ p.ClientName }}</td>
+        <td>{{ p.ReceiptDate }}</td><td class="num">{{ "{:,.2f}".format(p.TdsAmount) }}</td>
+        <td>
+          <form method="post" action="{{ url_for('ar.tds_cert') }}" class="grid2" style="grid-template-columns:1fr 1fr auto;gap:6px">
+            <input type="hidden" name="receipt_id" value="{{ p.ReceiptId }}">
+            <input name="cert_no" placeholder="Cert No." required>
+            <input name="cert_date" placeholder="dd-mm-yyyy" required>
+            <button class="btn ghost" type="submit">Mark Received</button>
+          </form>
+        </td>
+      </tr>
+      {% else %}<tr><td colspan="5">All certificates received.</td></tr>{% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

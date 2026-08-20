@@ -1,0 +1,32 @@
+{% extends "accounts/layout.html" %}
+{% block title %}Payment Reminders{% endblock %}
+{% block content %}
+<div class="cards">
+  <div class="stat"><div class="lbl">Due Today</div><div class="val">{{ dash.get('DueToday') or 0 }}</div></div>
+  <div class="stat"><div class="lbl">Due This Week</div><div class="val">{{ dash.get('DueThisWeek') or 0 }}</div></div>
+  <div class="stat"><div class="lbl">Overdue</div><div class="val out-pos">{{ dash.get('Overdue') or 0 }}</div></div>
+  <div class="stat"><div class="lbl">Critical (&gt;30 days)</div><div class="val out-pos">{{ dash.get('CriticalOverdue') or 0 }}</div></div>
+</div>
+<div class="card">
+  <h2>Automatic Email Reminders</h2>
+  <p style="font-size:13px;color:#555">Rules: 7 days before due · on due date · 7 / 15 / 30 days after due.<br>
+  Configure SMTP in <code>config.json</code> → <code>email</code> section.</p>
+  <form method="post" action="{{ url_for('ar.reminders_run') }}">
+    <button class="btn primary" type="submit">Run Reminders Now</button>
+  </form>
+</div>
+<div class="card">
+  <h2>Reminder History</h2>
+  <table>
+    <thead><tr><th>Date Sent</th><th>Invoice</th><th>Client</th><th>Rule</th><th>Channel</th><th>Recipient</th><th>Status</th></tr></thead>
+    <tbody>
+      {% for h in history %}
+      <tr>
+        <td>{{ h.SentAt }}</td><td>{{ h.InvoiceNumber }}</td><td>{{ h.ClientName }}</td>
+        <td>{{ h.RuleType }}</td><td>{{ h.Channel }}</td><td>{{ h.Recipient }}</td><td>{{ h.DeliveryStatus }}</td>
+      </tr>
+      {% else %}<tr><td colspan="7">No reminders sent yet.</td></tr>{% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

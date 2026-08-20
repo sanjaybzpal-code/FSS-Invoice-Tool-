@@ -1,0 +1,64 @@
+{% extends "accounts/layout.html" %}
+
+{% block title %}Segment Dashboard{% endblock %}
+
+{% block content %}
+
+<div class="card">
+
+  <h2>Business Segment Performance</h2>
+
+  <p class="small">Management reporting only — ledger, GST and invoice numbering remain common.</p>
+
+</div>
+
+{% for s in segments %}
+
+<div class="card">
+
+  <h2>{{ s.BusinessSegmentName }}</h2>
+
+  <div class="cards">
+
+    <div class="stat"><div class="lbl">Total Revenue</div><div class="val">₹ {{ "{:,.0f}".format(s.TotalRevenue or 0) }}</div></div>
+
+    <div class="stat"><div class="lbl">Collections Received</div><div class="val">₹ {{ "{:,.0f}".format(s.TotalCollected or 0) }}</div></div>
+
+    <div class="stat"><div class="lbl">Outstanding</div><div class="val out-pos">₹ {{ "{:,.0f}".format(s.Outstanding or 0) }}</div></div>
+
+    <div class="stat"><div class="lbl">Clients</div><div class="val">{{ s.ClientCount or 0 }}</div></div>
+
+  </div>
+
+  {% for p in profitability if p.BusinessSegmentId == s.BusinessSegmentId %}
+
+  <div class="cards" style="margin-top:10px">
+
+    <div class="stat"><div class="lbl">Expense</div><div class="val">₹ {{ "{:,.0f}".format(p.Expense or 0) }}</div></div>
+
+    <div class="stat"><div class="lbl">Profit</div><div class="val">₹ {{ "{:,.0f}".format(p.Profit or 0) }}</div></div>
+
+    <div class="stat"><div class="lbl">Profit %</div><div class="val">{{ "{:.1f}".format(p.ProfitPercent or 0) }}%</div></div>
+
+  </div>
+
+  {% endfor %}
+
+</div>
+
+{% endfor %}
+
+{% if can_profit %}
+
+<div class="card">
+
+  <a class="btn primary" href="{{ url_for('segment.export_report', report='profitability', fmt='xlsx') }}">Export Segment P&amp;L (Excel)</a>
+
+  <a class="btn ghost" href="{{ url_for('segment.export_report', report='profitability', fmt='pdf') }}">Export PDF</a>
+
+</div>
+
+{% endif %}
+
+{% endblock %}
+

@@ -1,0 +1,131 @@
+{% extends "accounts/layout.html" %}
+{% block title %}Bank Statement Import{% endblock %}
+{% block content %}
+<style>
+  .import-hero{text-align:center;padding:40px 20px 28px}
+  .import-hero h2{font-size:22px;color:var(--navy);margin:0 0 8px}
+  .import-hero p{color:var(--muted);font-size:14px;margin:0}
+  .drop-zone{border:2.5px dashed #c7d2e2;border-radius:16px;padding:52px 24px;
+             text-align:center;cursor:pointer;background:#fafbff;
+             transition:border-color .2s,background .2s;margin:0 auto;max-width:560px}
+  .drop-zone.drag-over{border-color:var(--navy2);background:#eef5ff}
+  .drop-zone .icon{font-size:52px;margin-bottom:12px;line-height:1}
+  .drop-zone .main-txt{font-size:16px;font-weight:700;color:var(--navy);margin-bottom:6px}
+  .drop-zone .sub-txt{font-size:13px;color:var(--muted)}
+  .drop-zone input[type=file]{display:none}
+  .drop-zone .browse-btn{display:inline-block;margin-top:14px;padding:9px 22px;
+    background:var(--navy);color:#fff;border-radius:8px;font-size:13px;font-weight:700;
+    cursor:pointer;transition:.15s}
+  .drop-zone .browse-btn:hover{background:var(--navy2)}
+  .file-chosen{display:none;align-items:center;gap:10px;justify-content:center;
+               margin-top:16px;font-size:14px;color:var(--navy);font-weight:600}
+  .file-chosen .fname{max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .upload-btn{display:block;margin:20px auto 0;padding:13px 40px;background:var(--navy);
+              color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:700;
+              cursor:pointer;transition:.15s;max-width:280px;width:100%;text-align:center}
+  .upload-btn:hover{background:var(--navy2)}
+  .upload-btn:disabled{opacity:.5;cursor:not-allowed}
+  .bank-badges{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin:28px auto 0;max-width:560px}
+  .bank-badge{background:#f1f5fb;border:1px solid #d1dced;border-radius:20px;
+              padding:5px 14px;font-size:12px;font-weight:600;color:var(--navy2)}
+  .how-box{max-width:560px;margin:24px auto 0;background:#f8fafc;border:1px solid var(--line);
+           border-radius:12px;padding:16px 20px}
+  .how-box h4{margin:0 0 10px;font-size:13px;color:var(--navy);text-transform:uppercase;letter-spacing:.04em}
+  .how-box ol{margin:0;padding-left:20px;font-size:13px;color:#374151;line-height:1.8}
+  .fmt-note{max-width:560px;margin:12px auto 0;font-size:12px;color:var(--muted);text-align:center}
+  .spin{display:none;width:20px;height:20px;border:3px solid rgba(255,255,255,.3);
+        border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;
+        margin:0 auto}
+  @keyframes spin{to{transform:rotate(360deg)}}
+</style>
+
+<div class="import-hero">
+  <h2>📥 Bank Statement Import</h2>
+  <p>Drop your bank statement — FSS will auto-match clients, detect TDS &amp; GST, and create receipts.</p>
+</div>
+
+<form method="post" enctype="multipart/form-data" id="uploadForm">
+  <div class="drop-zone" id="dropZone">
+    <div class="icon">🏦</div>
+    <div class="main-txt">Drag &amp; drop your bank statement here</div>
+    <div class="sub-txt">Excel, CSV or PDF • Credit entries only</div>
+    <label class="browse-btn" for="fileInput">Browse File</label>
+    <input type="file" id="fileInput" name="statement" accept=".xlsx,.xls,.csv,.pdf">
+    <div class="file-chosen" id="fileChosen">
+      <span>📄</span>
+      <span class="fname" id="fnameTxt"></span>
+      <span style="color:#16a34a;font-size:18px">✓</span>
+    </div>
+  </div>
+
+  <button class="upload-btn" type="submit" id="uploadBtn" disabled>
+    <span id="btnTxt">Select a file first</span>
+    <div class="spin" id="btnSpin"></div>
+  </button>
+</form>
+
+<div class="bank-badges">
+  <span class="bank-badge">🏛 SBI</span>
+  <span class="bank-badge">🏛 HDFC</span>
+  <span class="bank-badge">🏛 ICICI</span>
+  <span class="bank-badge">🏛 Axis</span>
+  <span class="bank-badge">🏛 Kotak</span>
+  <span class="bank-badge">🏛 Yes Bank</span>
+  <span class="bank-badge">🏛 PNB</span>
+  <span class="bank-badge">🔍 Generic Auto-detect</span>
+</div>
+
+<div class="how-box">
+  <h4>How it works</h4>
+  <ol>
+    <li>Upload your bank statement (Excel, CSV or PDF)</li>
+    <li>FSS auto-detects the bank format and extracts credit entries</li>
+    <li>Each credit is matched to a client by name in the narration</li>
+    <li>TDS &amp; GST are suggested based on pending invoices</li>
+    <li>You review, adjust, and confirm — receipts are created automatically</li>
+  </ol>
+</div>
+<p class="fmt-note">
+  Duplicate entries (same client + date + amount already in system) are pre-flagged and skipped by default.
+</p>
+
+<script>
+const dz = document.getElementById('dropZone');
+const fi = document.getElementById('fileInput');
+const btn = document.getElementById('uploadBtn');
+const btnTxt = document.getElementById('btnTxt');
+const btnSpin = document.getElementById('btnSpin');
+
+function setFile(file) {
+  if (!file) return;
+  document.getElementById('fnameTxt').textContent = file.name;
+  document.getElementById('fileChosen').style.display = 'flex';
+  btn.disabled = false;
+  btnTxt.textContent = 'Parse Statement →';
+  dz.style.borderColor = 'var(--navy2)';
+  dz.style.background = '#eef5ff';
+}
+
+fi.addEventListener('change', () => { if (fi.files[0]) setFile(fi.files[0]); });
+
+dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('drag-over'); });
+dz.addEventListener('dragleave', () => dz.classList.remove('drag-over'));
+dz.addEventListener('drop', e => {
+  e.preventDefault();
+  dz.classList.remove('drag-over');
+  const file = e.dataTransfer.files[0];
+  if (file) {
+    const dt = new DataTransfer();
+    dt.items.add(file);
+    fi.files = dt.files;
+    setFile(file);
+  }
+});
+
+document.getElementById('uploadForm').addEventListener('submit', () => {
+  btn.disabled = true;
+  btnTxt.style.display = 'none';
+  btnSpin.style.display = 'block';
+});
+</script>
+{% endblock %}

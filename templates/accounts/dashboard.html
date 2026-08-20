@@ -1,0 +1,86 @@
+{% extends "accounts/layout.html" %}
+{% block title %}Accounts Hub{% endblock %}
+{% block content %}
+<div class="cards">
+  <div class="stat"><div class="lbl">Total Invoiced</div><div class="val">₹ {{ "{:,.0f}".format(dash.get('TotalInvoiced') or exec_sum.get('TotalInvoiced') or 0) }}</div></div>
+  <div class="stat"><div class="lbl">Total Received</div><div class="val">₹ {{ "{:,.0f}".format(dash.get('TotalReceived') or exec_sum.get('TotalReceived') or 0) }}</div></div>
+  <div class="stat"><div class="lbl">Outstanding</div><div class="val out-pos">₹ {{ "{:,.0f}".format(dash.get('TotalOutstanding') or exec_sum.get('TotalOutstanding') or 0) }}</div></div>
+  <div class="stat"><div class="lbl">GST Receivable</div><div class="val">₹ {{ "{:,.0f}".format(exec_sum.get('TotalGstReceivable') or 0) }}</div></div>
+  <div class="stat"><div class="lbl">TDS Deducted</div><div class="val">₹ {{ "{:,.0f}".format(exec_sum.get('TotalTdsDeducted') or 0) }}</div></div>
+  <div class="stat"><div class="lbl">Active Clients</div><div class="val">{{ exec_sum.get('TotalActiveClients') or 0 }}</div></div>
+</div>
+
+{% if seg_cards.get('segments') %}
+<div class="card" style="margin-top:8px">
+  <h2>Revenue by Segment</h2>
+  <div class="cards">
+    <div class="stat"><div class="lbl">Total Revenue</div><div class="val">₹ {{ "{:,.0f}".format(seg_cards.get('total_revenue') or 0) }}</div></div>
+    {% for s in seg_cards.segments %}
+    <div class="stat"><div class="lbl">{{ s.BusinessSegmentName }}</div><div class="val">₹ {{ "{:,.0f}".format(s.TotalRevenue or 0) }}</div></div>
+    {% endfor %}
+  </div>
+</div>
+<div class="card">
+  <h2>Outstanding by Segment</h2>
+  <div class="cards">
+    <div class="stat"><div class="lbl">Total Outstanding</div><div class="val out-pos">₹ {{ "{:,.0f}".format(seg_cards.get('total_outstanding') or 0) }}</div></div>
+    {% for s in seg_cards.segments %}
+    <div class="stat"><div class="lbl">{{ s.BusinessSegmentName }}</div><div class="val out-pos">₹ {{ "{:,.0f}".format(s.Outstanding or 0) }}</div></div>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+<div class="cards" style="margin-top:8px">
+  <div class="stat"><div class="lbl">Due Today</div><div class="val">{{ rem.get('DueToday') or 0 }}</div></div>
+  <div class="stat"><div class="lbl">Due This Week</div><div class="val">{{ rem.get('DueThisWeek') or 0 }}</div></div>
+  <div class="stat"><div class="lbl">Overdue</div><div class="val out-pos">{{ rem.get('Overdue') or 0 }}</div></div>
+  <div class="stat"><div class="lbl">Critical (&gt;30d)</div><div class="val out-pos">{{ rem.get('CriticalOverdue') or 0 }}</div></div>
+</div>
+
+<div class="card" style="margin-top:16px">
+  <h2>Ledger &amp; Billing</h2>
+  <div class="modgrid">
+    <a class="mod" href="{{ url_for('index') }}"><b>Tax Invoices</b><span>Create PDF / Excel invoices</span></a>
+    <a class="mod" href="{{ url_for('index', type='proforma') }}" style="border-color:#fcd34d;background:#fffbeb"><b>Proforma Invoice</b><span>Approval only — no GST filing yet</span></a>
+    <a class="mod" href="{{ url_for('accounts.clients_master') }}"><b>Client Master</b><span>Name, GSTIN, contacts</span></a>
+    <a class="mod" href="{{ url_for('accounts.invoices') }}"><b>Invoice Archive</b><span>Download stored PDF / Excel anytime</span></a>
+    <a class="mod" href="{{ url_for('accounts.non_gst_bills') }}"><b>Non-GST Bills</b><span>Cash / without GST amounts</span></a>
+    <a class="mod" href="{{ url_for('accounts.receipts') }}"><b>Payment Receipts</b><span>Record payments &amp; TDS</span></a>
+    <a class="mod" href="{{ url_for('accounts.ledger') }}"><b>Client Ledger</b><span>Tally-style running balance</span></a>
+    <a class="mod" href="{{ url_for('accounts.outstanding') }}"><b>Outstanding</b><span>Client-wise balances</span></a>
+    <a class="mod" href="{{ url_for('accounts.ageing') }}"><b>Ageing Report</b><span>0–30 / 31–60 / 61–90 / 90+</span></a>
+  </div>
+</div>
+
+<div class="card">
+  <h2>Collections &amp; Compliance</h2>
+  <div class="modgrid">
+    <a class="mod" href="{{ url_for('ar.reminders') }}"><b>Email Reminders</b><span>Auto payment reminders</span></a>
+    <a class="mod" href="{{ url_for('ar.whatsapp') }}"><b>WhatsApp</b><span>Send outstanding messages</span></a>
+    <a class="mod" href="{{ url_for('ar.tds') }}"><b>TDS Tracking</b><span>Deductions &amp; certificates</span></a>
+    <a class="mod" href="{{ url_for('ar.gst') }}"><b>GST Receivable</b><span>CGST / SGST / IGST summary</span></a>
+  </div>
+</div>
+
+<div class="card">
+  <h2>Management</h2>
+  <div class="modgrid">
+    <a class="mod" href="{{ url_for('segment.segments_dashboard') }}"><b>Segment Dashboard</b><span>Revenue &amp; outstanding by segment</span></a>
+    {% if can_management %}<a class="mod" href="{{ url_for('segment.management_dashboard') }}"><b>Management Dashboard</b><span>P&amp;L, expenses, MIS</span></a>{% endif %}
+    {% if can_expenses %}<a class="mod" href="{{ url_for('segment.expenses') }}"><b>Expenses</b><span>Admin expense register</span></a>{% endif %}
+    {% if can_profit %}<a class="mod" href="{{ url_for('ar.profitability') }}"><b>Profitability</b><span>Segment P&amp;L</span></a>{% endif %}
+    {% if is_admin %}<a class="mod" href="{{ url_for('users') }}"><b>Team &amp; Roles</b><span>User logins &amp; permissions</span></a>{% endif %}
+    {% if is_admin %}<a class="mod" href="{{ url_for('ar.audit_view') }}"><b>Audit Trail</b><span>User action log</span></a>{% endif %}
+  </div>
+</div>
+
+<div class="card">
+  <h2>Setup</h2>
+  <form method="post" action="{{ url_for('accounts.sync_clients') }}" style="display:inline">
+    <button class="btn primary" type="submit">Sync Clients from Excel</button>
+  </form>
+  <a class="btn ghost" href="{{ url_for('accounts.receipts') }}">Record Payment</a>
+  <a class="btn ghost" href="{{ url_for('ar.reminders') }}">Run Reminders</a>
+</div>
+{% endblock %}

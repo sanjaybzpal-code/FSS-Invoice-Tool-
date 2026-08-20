@@ -1,0 +1,52 @@
+{% extends "accounts/layout.html" %}
+
+{% block title %}Segment Profitability{% endblock %}
+
+{% block content %}
+
+<div class="card">
+
+  <h2>Segment Profitability</h2>
+
+  <p class="small">Revenue from invoices · Expenses from Expense module · Profit computed automatically.</p>
+
+  <a class="btn primary" href="{{ url_for('segment.export_report', report='profitability', fmt='xlsx') }}">Export Excel</a>
+
+  <a class="btn ghost" href="{{ url_for('segment.export_report', report='profitability', fmt='pdf') }}">Export PDF</a>
+
+</div>
+
+<table class="card" style="width:100%">
+
+  <thead><tr><th>Segment</th><th>Revenue</th><th>Expense</th><th>Profit</th><th>Profit %</th></tr></thead>
+
+  <tbody>
+
+    {% for r in segments %}
+
+    <tr>
+
+      <td><b>{{ r.BusinessSegmentName }}</b></td>
+
+      <td class="num">₹ {{ "{:,.0f}".format(r.Revenue or 0) }}</td>
+
+      <td class="num">₹ {{ "{:,.0f}".format(r.Expense or 0) }}</td>
+
+      <td class="num">₹ {{ "{:,.0f}".format(r.Profit or 0) }}</td>
+
+      <td class="num">{{ "{:.1f}".format(r.ProfitPercent or 0) }}%</td>
+
+    </tr>
+
+    {% else %}
+
+    <tr><td colspan="5">No data yet. Generate invoices and record expenses.</td></tr>
+
+    {% endfor %}
+
+  </tbody>
+
+</table>
+
+{% endblock %}
+

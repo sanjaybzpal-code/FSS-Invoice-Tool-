@@ -1,0 +1,60 @@
+{% extends "accounts/layout.html" %}
+{% block title %}Outstanding{% endblock %}
+{% block content %}
+<div class="cards" style="margin-bottom:16px">
+  <div class="stat"><div class="lbl">Total Outstanding</div><div class="val out-pos">₹ {{ "{:,.2f}".format(dash.get('TotalOutstanding') or 0) }}</div></div>
+  <div class="stat"><div class="lbl">TDS Deducted (all clients)</div><div class="val">₹ {{ "{:,.2f}".format(dash.get('TotalTdsDeducted') or 0) }}</div></div>
+  <div class="stat"><div class="lbl">GST Still Pending</div><div class="val">₹ {{ "{:,.2f}".format(dash.get('TotalGstOutstanding') or 0) }}</div></div>
+  <div class="stat"><div class="lbl">Clients with Balance</div><div class="val">{{ dash.get('OutstandingClientCount') or 0 }}</div></div>
+</div>
+
+{% if segment_outstanding %}
+<div class="card">
+  <h2>Segment-wise Outstanding</h2>
+  <div class="cards">
+    {% for s in segment_outstanding %}
+    <div class="stat">
+      <div class="lbl">{{ s.BusinessSegmentName }}</div>
+      <div class="val out-pos">₹ {{ "{:,.0f}".format(s.Outstanding or 0) }}</div>
+      <div class="small">Revenue ₹ {{ "{:,.0f}".format(s.TotalRevenue or 0) }} · Collected ₹ {{ "{:,.0f}".format(s.TotalCollected or 0) }}</div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+<div class="card">
+  <h2>Client-wise Outstanding</h2>
+  <p class="small" style="margin:0 0 12px">
+    <b>Outstanding</b> = Total Billed − Cash Received − TDS Deducted.
+    TDS reduces balance even when client pays net of TDS to you.
+  </p>
+  <table>
+    <thead><tr>
+      <th>Client</th><th>GSTIN</th><th>Tax Invoiced</th><th>Non-GST</th>
+      <th>Total Billed</th><th>Cash Received</th><th>TDS Deducted</th>
+      <th>Effective Rcvd</th><th>GST Pending</th><th>Outstanding</th>
+      <th>Last Tax Inv.</th><th>Last Payment</th>
+    </tr></thead>
+    <tbody>
+      {% for c in clients %}
+      <tr>
+        <td><a href="{{ url_for('accounts.client_detail', client_id=c.ClientId) }}">{{ c.ClientName }}</a></td>
+        <td>{{ c.GSTIN or '-' }}</td>
+        <td class="num">{{ "{:,.2f}".format(c.TotalTaxInvoiced or 0) }}</td>
+        <td class="num">{{ "{:,.2f}".format(c.TotalNonGstBilled or 0) }}</td>
+        <td class="num">{{ "{:,.2f}".format(c.TotalInvoiced or 0) }}</td>
+        <td class="num">{{ "{:,.2f}".format(c.TotalReceived or 0) }}</td>
+        <td class="num">{{ "{:,.2f}".format(c.TotalTdsDeducted or 0) }}</td>
+        <td class="num">{{ "{:,.2f}".format(c.EffectiveReceived or 0) }}</td>
+        <td class="num">{{ "{:,.2f}".format(c.GstOutstanding or 0) }}</td>
+        <td class="num {% if (c.Outstanding or 0) > 0 %}out-pos{% else %}out-zero{% endif %}">{{ "{:,.2f}".format(c.Outstanding or 0) }}</td>
+        <td>{{ c.LastInvoiceDate.strftime('%d-%m-%Y') if c.LastInvoiceDate else '-' }}</td>
+        <td>{{ c.LastPaymentDate.strftime('%d-%m-%Y') if c.LastPaymentDate else '-' }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="12">No data.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

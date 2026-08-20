@@ -1,0 +1,18 @@
+{% extends "accounts/layout.html" %}
+{% block title %}Audit Trail{% endblock %}
+{% block content %}
+<div class="card">
+  <h2>User Action Audit Log</h2>
+  <table>
+    <thead><tr><th>When</th><th>User</th><th>Action</th><th>Entity</th><th>Details</th></tr></thead>
+    <tbody>
+      {% for r in rows %}
+      <tr>
+        <td>{{ r.CreatedAt }}</td><td>{{ r.UserName }}</td><td>{{ r.Action }}</td>
+        <td>{{ r.EntityType }} {{ r.EntityId or '' }}</td><td>{{ (r.Details or '')[:80] }}</td>
+      </tr>
+      {% else %}<tr><td colspan="5">No audit entries.</td></tr>{% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

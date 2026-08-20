@@ -1,0 +1,94 @@
+<div class="grid2">
+  <div>
+    <label>Receipt Number</label>
+    <input name="receipt_number"
+           value="{{ edit_receipt.ReceiptNumber if edit_receipt else next_receipt }}"
+           placeholder="Auto">
+  </div>
+  <div>
+    <label>Date</label>
+    <input name="receipt_date"
+           value="{{ edit_receipt.ReceiptDate.strftime('%d-%m-%Y') if edit_receipt and edit_receipt.ReceiptDate else today }}"
+           placeholder="dd-mm-yyyy">
+  </div>
+  <div>
+    <label>Client *</label>
+    <select name="client_id" required>
+      <option value="">— Select —</option>
+      {% for c in clients %}
+      <option value="{{ c.ClientId }}"
+        {% if edit_receipt and edit_receipt.ClientId==c.ClientId %}selected{% endif %}>
+        {{ c.ClientName }}
+      </option>
+      {% endfor %}
+    </select>
+  </div>
+  <div>
+    <label>Amount Received (cash) *</label>
+    <input name="amount" type="number" step="0.01" min="0.01" required
+           value="{{ edit_receipt.AmountReceived if edit_receipt else '' }}">
+  </div>
+  <div>
+    <label>Taxable Amount (ex-GST) — TDS base</label>
+    <input name="taxable_amount" type="number" step="0.01" min="0"
+           value="{{ edit_receipt.TaxableAmount or edit_receipt.InvoiceAmount if edit_receipt else '' }}"
+           placeholder="Net amount before GST">
+  </div>
+  <div>
+    <label>TDS %</label>
+    <input name="tds_percent" type="number" step="0.01" min="0"
+           value="{{ edit_receipt.TdsPercentage if edit_receipt else 0 }}">
+  </div>
+  <div>
+    <label>TDS Amount (₹)</label>
+    <input name="tds_amount" type="number" step="0.01" min="0"
+           value="{{ edit_receipt.TdsAmount if edit_receipt else '' }}"
+           placeholder="Auto from % or enter manually">
+  </div>
+  <div style="display:flex;align-items:flex-end;padding-bottom:8px">
+    <label class="checkrow" style="display:flex;align-items:center;gap:8px;margin:0">
+      <input type="checkbox" name="tds_manual" value="1"
+             {% if edit_receipt and edit_receipt.TdsManual %}checked{% endif %}>
+      Manual TDS amount (ignore %)
+    </label>
+  </div>
+  <div>
+    <label>GST on Invoice (₹)</label>
+    <input name="gst_amount" type="number" step="0.01" min="0"
+           value="{{ edit_receipt.GstAmount if edit_receipt else '' }}"
+           placeholder="Total GST component">
+  </div>
+  <div>
+    <label>GST Paid by Client (₹)</label>
+    <input name="gst_paid_amount" type="number" step="0.01" min="0"
+           value="{{ edit_receipt.GstPaidAmount if edit_receipt else '' }}">
+  </div>
+  <div>
+    <label>GST Payment Status</label>
+    <select name="gst_paid_status">
+      {% set gs = (edit_receipt.GstPaidStatus or 'unknown') if edit_receipt else 'unknown' %}
+      <option value="unknown" {% if gs=='unknown' %}selected{% endif %}>Unknown — confirm with client</option>
+      <option value="none" {% if gs=='none' %}selected{% endif %}>Not paid (GST pending)</option>
+      <option value="partial" {% if gs=='partial' %}selected{% endif %}>Partially paid</option>
+      <option value="full" {% if gs=='full' %}selected{% endif %}>Fully paid</option>
+    </select>
+  </div>
+  <div>
+    <label>Payment Mode</label>
+    <select name="payment_mode">
+      {% set pm = edit_receipt.PaymentMode if edit_receipt else 'NEFT' %}
+      {% for m in ['NEFT','RTGS','Cheque','UPI','Cash','IMPS'] %}
+      <option {% if pm==m %}selected{% endif %}>{{ m }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div>
+    <label>Reference Number</label>
+    <input name="reference" placeholder="UTR / Cheque no."
+           value="{{ edit_receipt.ReferenceNumber or '' if edit_receipt else '' }}">
+  </div>
+</div>
+<label>Link to Open Invoices (optional)</label>
+<div id="openInvoicesBox" style="margin:6px 0 12px;padding:10px;background:#f8fafc;border-radius:8px;border:1px solid var(--line)"></div>
+<label>Remarks</label>
+<textarea name="remarks" rows="2">{{ edit_receipt.Remarks or '' if edit_receipt else '' }}</textarea>

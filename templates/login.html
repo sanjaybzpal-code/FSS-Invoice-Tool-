@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sign in — FSS Invoice Generator</title>
+<style>
+  :root{--navy:#1F3864;--navy2:#2E5496;--bg:#f4f6fa;--line:#dfe3ea;--err:#b42318}
+  *{box-sizing:border-box}
+  body{margin:0;font-family:"Segoe UI",Arial,sans-serif;background:linear-gradient(135deg,#1F3864,#2E5496);
+    min-height:100vh;display:flex;align-items:center;justify-content:center}
+  .card{background:#fff;width:360px;max-width:92vw;border-radius:14px;padding:30px 28px;
+    box-shadow:0 20px 60px rgba(0,0,0,.30)}
+  .brand{text-align:center;margin-bottom:20px}
+  .brand h1{margin:0;color:var(--navy);font-size:20px}
+  .brand p{margin:4px 0 0;color:#6b7280;font-size:12px}
+  label{display:block;font-size:12px;font-weight:600;color:#374151;margin:14px 0 5px}
+  input{width:100%;padding:11px 12px;border:1px solid var(--line);border-radius:9px;font-size:15px}
+  input:focus{outline:none;border-color:var(--navy2);box-shadow:0 0 0 3px rgba(46,84,150,.15)}
+  button{width:100%;margin-top:20px;background:var(--navy);color:#fff;border:none;border-radius:9px;
+    padding:12px;font-size:15px;font-weight:700;cursor:pointer}
+  button:hover{background:var(--navy2)}
+  .err{background:#fde8e8;color:var(--err);border:1px solid #f5c2c7;border-radius:8px;
+    padding:9px 12px;font-size:13px;margin-top:14px}
+</style>
+</head>
+<body>
+  <form class="card" method="post" action="{{ url_for('login') }}">
+    <div class="brand">
+      <h1>Façade Structural Services</h1>
+      <p>Invoice Generator — please sign in</p>
+    </div>
+    {% with messages = get_flashed_messages() %}
+      {% if messages %}<div class="err">{{ messages[0] }}</div>{% endif %}
+    {% endwith %}
+    <label for="username">Username</label>
+    <input id="username" name="username" autocomplete="username" autofocus required>
+    <label for="password">Password</label>
+    <input id="password" name="password" type="password" autocomplete="current-password" required>
+    <button type="submit">Sign in</button>
+  </form>
+</body>
+</html>

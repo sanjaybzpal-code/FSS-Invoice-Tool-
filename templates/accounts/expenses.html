@@ -1,0 +1,182 @@
+{% extends "accounts/layout.html" %}
+
+{% block title %}Expenses{% endblock %}
+
+{% block content %}
+
+<div class="card">
+
+  <h2>{% if edit_expense %}Edit{% else %}Add{% endif %} Expense</h2>
+
+  <form method="post">
+
+    {% if edit_expense %}<input type="hidden" name="expense_id" value="{{ edit_expense.ExpenseId }}">{% endif %}
+
+    <div class="grid2">
+
+      <div><label>Expense Date</label><input name="expense_date" value="{{ edit_expense.ExpenseDate.strftime('%d-%m-%Y') if edit_expense and edit_expense.ExpenseDate else today }}" required></div>
+
+      <div><label>Category</label>
+
+        <select name="category_id" required>
+
+          {% for c in categories %}<option value="{{ c.ExpenseCategoryId }}" {% if edit_expense and edit_expense.ExpenseCategoryId==c.ExpenseCategoryId %}selected{% endif %}>{{ c.CategoryName }}</option>{% endfor %}
+
+        </select>
+
+      </div>
+
+      <div style="grid-column:1/-1"><label>Description</label><input name="description" value="{{ edit_expense.ExpenseDescription if edit_expense else '' }}" required></div>
+
+      <div><label>Amount (excl. GST)</label><input name="amount" type="number" step="0.01" value="{{ edit_expense.Amount if edit_expense else '' }}" required></div>
+
+      <div><label>GST Amount</label><input name="gst_amount" type="number" step="0.01" value="{{ edit_expense.GstAmount if edit_expense else 0 }}"></div>
+
+      <div><label>Vendor</label><input name="vendor" value="{{ edit_expense.VendorName if edit_expense else '' }}"></div>
+
+      <div><label>Payment Mode</label><input name="payment_mode" value="{{ edit_expense.PaymentMode if edit_expense else '' }}"></div>
+
+      <div><label>Reference No.</label><input name="reference" value="{{ edit_expense.ReferenceNumber if edit_expense else '' }}"></div>
+
+      <div><label>Remarks</label><input name="remarks" value="{{ edit_expense.Remarks if edit_expense else '' }}"></div>
+
+      <div><label>Allocation</label>
+
+        <select name="allocation_type" id="allocType">
+
+          <option value="segment">Direct to Segment</option>
+
+          <option value="common_equal">Common — Equal Split</option>
+
+          <option value="common_revenue">Common — Revenue Based</option>
+
+          <option value="common_manual">Common — Manual %</option>
+
+        </select>
+
+      </div>
+
+      <div id="segPick"><label>Segment</label>
+
+        <select name="segment_id">
+
+          {% for s in segments %}<option value="{{ s.BusinessSegmentId }}">{{ s.BusinessSegmentName }}</option>{% endfor %}
+
+        </select>
+
+      </div>
+
+    </div>
+
+    <div id="manualAlloc" style="display:none;margin-top:12px" class="grid2">
+
+      {% for s in segments %}
+
+      <div><label>{{ s.BusinessSegmentName }} %</label><input name="alloc_pct_{{ s.BusinessSegmentId }}" type="number" step="0.01" placeholder="0"></div>
+
+      {% endfor %}
+
+    </div>
+
+    <button class="btn primary" type="submit" style="margin-top:12px">Save Expense</button>
+
+  </form>
+
+</div>
+
+
+
+<div class="card">
+
+  <h2>Add Category</h2>
+
+  <form method="post" class="grid2" style="display:flex;gap:10px;align-items:flex-end">
+
+    <input type="hidden" name="action" value="add_category">
+
+    <div style="flex:1"><label>New Category Name</label><input name="category_name" required></div>
+
+    <button class="btn ghost" type="submit">Add</button>
+
+  </form>
+
+</div>
+
+
+
+<div class="card">
+
+  <h2>Expense Register</h2>
+
+  <a class="btn ghost" href="{{ url_for('segment.export_report', report='expenses', fmt='xlsx') }}">Export Excel</a>
+
+  <table style="margin-top:12px">
+
+    <thead><tr><th>Date</th><th>Category</th><th>Description</th><th>Amount</th><th>GST</th><th>Total</th><th>Allocation</th><th></th></tr></thead>
+
+    <tbody>
+
+      {% for e in expenses %}
+
+      <tr>
+
+        <td>{{ e.ExpenseDate.strftime('%d-%m-%Y') if e.ExpenseDate else e.ExpenseDate }}</td>
+
+        <td>{{ e.CategoryName }}</td>
+
+        <td>{{ e.ExpenseDescription }}</td>
+
+        <td class="num">{{ "{:,.2f}".format(e.Amount or 0) }}</td>
+
+        <td class="num">{{ "{:,.2f}".format(e.GstAmount or 0) }}</td>
+
+        <td class="num">{{ "{:,.2f}".format(e.TotalAmount or 0) }}</td>
+
+        <td>{{ e.BusinessSegmentName or e.AllocationType }}</td>
+
+        <td>
+
+          <a href="{{ url_for('segment.expenses', edit=e.ExpenseId) }}">Edit</a>
+
+          <form method="post" style="display:inline" onsubmit="return confirm('Delete?');">
+
+            <input type="hidden" name="action" value="delete">
+
+            <input type="hidden" name="expense_id" value="{{ e.ExpenseId }}">
+
+            <button class="btn ghost" type="submit" style="padding:4px 8px">Del</button>
+
+          </form>
+
+        </td>
+
+      </tr>
+
+      {% else %}
+
+      <tr><td colspan="8">No expenses recorded.</td></tr>
+
+      {% endfor %}
+
+    </tbody>
+
+  </table>
+
+</div>
+
+<script>
+
+document.getElementById('allocType').addEventListener('change', function(){
+
+  const t = this.value;
+
+  document.getElementById('segPick').style.display = t === 'segment' ? 'block' : 'none';
+
+  document.getElementById('manualAlloc').style.display = t === 'common_manual' ? 'grid' : 'none';
+
+});
+
+</script>
+
+{% endblock %}
+

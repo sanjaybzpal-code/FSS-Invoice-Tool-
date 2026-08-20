@@ -1,0 +1,29 @@
+# Secrets & local auth
+auth.json
+.secret_key
+.env
+*.env
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.Python
+.venv/
+venv/
+
+# Generated / runtime
+Exports/
+temp_imports/
+clients_cache.json
+invoices_log.json
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# OS
+Thumbs.db
+Desktop.ini
+.DS_Store

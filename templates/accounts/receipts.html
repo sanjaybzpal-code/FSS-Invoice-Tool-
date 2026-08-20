@@ -1,0 +1,140 @@
+{% extends "accounts/layout.html" %}
+{% block title %}Payment Receipts{% endblock %}
+{% block content %}
+
+{% if edit_receipt %}
+<div class="card">
+  <h2>Edit Receipt — {{ edit_receipt.ReceiptNumber }}</h2>
+  <form method="post" id="receiptForm">
+    <input type="hidden" name="action" value="edit">
+    <input type="hidden" name="receipt_id" value="{{ edit_receipt.ReceiptId }}">
+    {% include "accounts/_receipt_form_fields.html" %}
+    <div style="margin-top:12px;display:flex;gap:8px">
+      <button class="btn primary" type="submit">Save Changes</button>
+      <a class="btn ghost" href="{{ url_for('accounts.receipts') }}">Cancel</a>
+    </div>
+  </form>
+</div>
+{% else %}
+<div class="card">
+  <h2>Record Payment Received</h2>
+  <form method="post" id="receiptForm">
+    <input type="hidden" name="action" value="add">
+    {% include "accounts/_receipt_form_fields.html" %}
+    <p class="small" style="margin-top:8px">
+      <b>TDS</b> is calculated on <b>taxable amount (ex-GST)</b>, not gross.
+      Use manual TDS amount when client deducted a fixed ₹ (call client to confirm).
+      Segment is derived from linked invoices (FIFO).
+    </p>
+    <div style="margin-top:12px"><button class="btn primary" type="submit">Save Receipt</button></div>
+  </form>
+</div>
+{% endif %}
+
+<div class="card">
+  <h2>Recent Receipts</h2>
+  <table>
+    <thead><tr>
+      <th>Date</th><th>Receipt No.</th><th>Client</th><th>Mode</th>
+      <th>Cash</th><th>TDS</th><th>GST Paid</th><th>Reference</th><th></th>
+    </tr></thead>
+    <tbody>
+      {% for r in receipts %}
+      <tr>
+        <td>{{ r.ReceiptDate.strftime('%d-%m-%Y') if r.ReceiptDate else r.ReceiptDate }}</td>
+        <td><b>{{ r.ReceiptNumber }}</b></td>
+        <td>{{ r.ClientName }}</td>
+        <td>{{ r.PaymentMode }}</td>
+        <td class="num">{{ "{:,.2f}".format(r.AmountReceived) }}</td>
+        <td class="num">{{ "{:,.2f}".format(r.TdsAmount or 0) }}</td>
+        <td class="num">{{ "{:,.2f}".format(r.GstPaidAmount or 0) }}</td>
+        <td>{{ r.ReferenceNumber or '-' }}</td>
+        <td>
+          <a class="btn ghost" style="padding:4px 8px;font-size:12px"
+             href="{{ url_for('accounts.receipts', edit=r.ReceiptId) }}">Edit</a>
+          <form method="post" style="display:inline" onsubmit="return confirm('Delete this receipt?');">
+            <input type="hidden" name="action" value="delete">
+            <input type="hidden" name="receipt_id" value="{{ r.ReceiptId }}">
+            <button class="btn ghost" style="padding:4px 8px;font-size:12px;color:#b42318" type="submit">Del</button>
+          </form>
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="9">No receipts recorded yet.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<script>
+(function(){
+  const form = document.getElementById('receiptForm');
+  if (!form) return;
+  const clientSel = form.querySelector('[name=client_id]');
+  const invBox = document.getElementById('openInvoicesBox');
+  const taxableIn = form.querySelector('[name=taxable_amount]');
+  const tdsPctIn = form.querySelector('[name=tds_percent]');
+  const tdsAmtIn = form.querySelector('[name=tds_amount]');
+  const tdsManual = form.querySelector('[name=tds_manual]');
+  const gstAmtIn = form.querySelector('[name=gst_amount]');
+  const gstPaidIn = form.querySelector('[name=gst_paid_amount]');
+
+  function calcTds(){
+    if (tdsManual && tdsManual.checked) return;
+    const base = parseFloat(taxableIn?.value || 0);
+    const pct = parseFloat(tdsPctIn?.value || 0);
+    if (tdsAmtIn && base > 0 && pct > 0)
+      tdsAmtIn.value = (base * pct / 100).toFixed(2);
+  }
+
+  async function loadInvoices(){
+    if (!clientSel || !invBox) return;
+    const cid = clientSel.value;
+    invBox.innerHTML = '<span class="small">Loading open invoices…</span>';
+    if (!cid){ invBox.innerHTML = ''; return; }
+    try {
+      const res = await fetch('/accounts/api/client/' + cid + '/open-invoices');
+      const data = await res.json();
+      if (!data.ok){ invBox.innerHTML = ''; return; }
+      if (!data.invoices.length){
+        invBox.innerHTML = '<span class="small">No open tax invoices for this client.</span>';
+        return;
+      }
+      const selIds = {{ edit_alloc.invoice_ids | tojson if edit_alloc else '[]' }};
+      invBox.innerHTML = data.invoices.map(inv =>
+        `<label style="display:block;font-size:13px;margin:4px 0">
+          <input type="checkbox" name="invoice_ids" value="${inv.InvoiceId}"
+            ${selIds.includes(inv.InvoiceId)?'checked':''}
+            data-taxable="${inv.TaxableAmount}" data-gst="${(inv.TotalAmount - inv.TaxableAmount).toFixed(2)}">
+          ${inv.InvoiceNumber} — pending ₹ ${inv.Pending.toLocaleString('en-IN',{minimumFractionDigits:2})}
+          (taxable ₹ ${inv.TaxableAmount.toLocaleString('en-IN',{minimumFractionDigits:2})})
+        </label>`).join('');
+      invBox.querySelectorAll('input[type=checkbox]').forEach(cb => {
+        cb.addEventListener('change', fillFromInvoices);
+      });
+    } catch(e){ invBox.innerHTML = ''; }
+  }
+
+  function fillFromInvoices(){
+    const checked = [...(invBox?.querySelectorAll('input:checked') || [])];
+    if (!checked.length) return;
+    let taxable = 0, gst = 0;
+    checked.forEach(cb => {
+      taxable += parseFloat(cb.dataset.taxable || 0);
+      gst += parseFloat(cb.dataset.gst || 0);
+    });
+    if (taxableIn) taxableIn.value = taxable.toFixed(2);
+    if (gstAmtIn) gstAmtIn.value = gst.toFixed(2);
+    calcTds();
+  }
+
+  if (clientSel) clientSel.addEventListener('change', loadInvoices);
+  if (taxableIn) taxableIn.addEventListener('input', calcTds);
+  if (tdsPctIn) tdsPctIn.addEventListener('input', calcTds);
+  if (tdsManual) tdsManual.addEventListener('change', () => {
+    if (!tdsManual.checked) calcTds();
+  });
+  loadInvoices();
+})();
+</script>
+{% endblock %}

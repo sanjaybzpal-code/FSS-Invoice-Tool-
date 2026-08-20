@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}Accounts{% endblock %} — FSS</title>
+<style>
+  :root{--navy:#1F3864;--navy2:#2E5496;--bg:#f4f6fa;--line:#dfe3ea;--muted:#6b7280}
+  *{box-sizing:border-box}
+  body{margin:0;font-family:"Segoe UI",Arial,sans-serif;background:var(--bg);color:#1f2937}
+  header{background:var(--navy);color:#fff;padding:14px 20px}
+  .headrow{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px}
+  header h1{font-size:18px;margin:0}
+  header .sub{font-size:11px;opacity:.75;margin-top:2px}
+  nav{display:flex;gap:4px;flex-wrap:wrap;margin-top:10px;padding-top:10px;border-top:1px solid rgba(255,255,255,.15)}
+  nav a{color:#fff;text-decoration:none;padding:6px 10px;border-radius:6px;font-size:12px;font-weight:600;opacity:.85}
+  nav a:hover,nav a.active{background:rgba(255,255,255,.18);opacity:1}
+  nav .sep{width:1px;background:rgba(255,255,255,.2);margin:0 4px}
+  main{max-width:1100px;margin:20px auto;padding:0 16px 40px}
+  .card{background:#fff;border:1px solid var(--line);border-radius:10px;padding:18px 20px;margin-bottom:16px}
+  .card h2{font-size:14px;text-transform:uppercase;color:var(--navy);margin:0 0 14px;letter-spacing:.04em}
+  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px}
+  .stat{background:#fff;border:1px solid var(--line);border-radius:10px;padding:14px}
+  .stat .lbl{font-size:11px;color:var(--muted);text-transform:uppercase}
+  .stat .val{font-size:20px;font-weight:800;color:var(--navy);margin-top:4px}
+  .modgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px}
+  .mod{display:block;padding:14px;border:1px solid var(--line);border-radius:10px;text-decoration:none;color:inherit;background:#fafbfc;transition:.15s}
+  .mod:hover{border-color:var(--navy2);background:#eef6ff}
+  .mod b{display:block;color:var(--navy);font-size:14px;margin-bottom:4px}
+  .mod span{font-size:12px;color:var(--muted)}
+  table{width:100%;border-collapse:collapse;font-size:14px}
+  th{background:var(--navy);color:#fff;padding:9px 8px;text-align:left;font-size:12px}
+  td{padding:8px;border-bottom:1px solid var(--line)}
+  td.num{text-align:right;font-variant-numeric:tabular-nums}
+  .btn{border:none;border-radius:8px;padding:9px 14px;font-size:13px;font-weight:600;cursor:pointer;text-decoration:none;display:inline-block;margin:2px}
+  .primary{background:var(--navy);color:#fff}
+  .ghost{background:#eef2f7;color:var(--navy)}
+  .msg{background:#eef6ff;color:#1d4ed8;border:1px solid #cfe0ff;border-radius:8px;padding:9px 12px;font-size:13px;margin-bottom:12px}
+  label{display:block;font-size:12px;font-weight:600;margin:10px 0 4px}
+  input,select,textarea{width:100%;padding:9px 10px;border:1px solid var(--line);border-radius:7px;font-size:14px}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .out-pos{color:#b42318;font-weight:700}
+  .out-zero{color:var(--muted)}
+</style>
+</head>
+<body>
+<header>
+  <div class="headrow">
+    <div>
+      <h1>FSS Invoice &amp; Accounts Suite</h1>
+      <div class="sub">Signed in: {{ user or '—' }}{% if user_role %} · {{ user_role }}{% endif %}</div>
+    </div>
+    <div>
+      <a class="btn ghost" href="{{ url_for('index') }}" style="color:#fff;background:rgba(255,255,255,.12)">← Invoices</a>
+      <a class="btn ghost" href="{{ url_for('index', type='proforma') }}" style="color:#fff;background:#b45309">Proforma</a>
+      <a class="btn ghost" href="{{ url_for('logout') }}" style="color:#fff;background:rgba(255,255,255,.12)">Logout</a>
+    </div>
+  </div>
+  <nav>
+    <a href="{{ url_for('accounts.dashboard') }}" class="{% if request.endpoint=='accounts.dashboard' %}active{% endif %}">Hub</a>
+    <a href="{{ url_for('segment.segments_dashboard') }}" class="{% if request.endpoint=='segment.segments_dashboard' %}active{% endif %}">Segments</a>
+    <span class="sep"></span>
+    <a href="{{ url_for('accounts.clients_master') }}">Clients</a>
+    <a href="{{ url_for('accounts.invoices') }}">Archive</a>
+    <a href="{{ url_for('accounts.non_gst_bills') }}">Non-GST</a>
+    <a href="{{ url_for('accounts.receipts') }}">Receipts</a>
+    <a href="{{ url_for('accounts.bank_import') }}" class="{% if request.endpoint=='accounts.bank_import' or request.endpoint=='accounts.bank_import_confirm' %}active{% endif %}">Bank Import</a>
+
+    <a href="{{ url_for('accounts.ledger') }}">Ledger</a>
+    <a href="{{ url_for('accounts.outstanding') }}">Outstanding</a>
+    <a href="{{ url_for('accounts.ageing') }}">Ageing</a>
+    <span class="sep"></span>
+    <a href="{{ url_for('ar.reminders') }}" class="{% if request.endpoint and request.endpoint.startswith('ar.reminders') %}active{% endif %}">Reminders</a>
+    <a href="{{ url_for('ar.whatsapp') }}">WhatsApp</a>
+    <a href="{{ url_for('ar.tds') }}">TDS</a>
+    <a href="{{ url_for('ar.gst') }}">GST</a>
+    <span class="sep"></span>
+    <a href="{{ url_for('ar.executive') }}">Executive</a>
+    {% if can_profit %}<a href="{{ url_for('ar.profitability') }}">Profitability</a>{% endif %}
+    {% if can_management %}<a href="{{ url_for('segment.management_dashboard') }}">Management</a>{% endif %}
+    {% if can_expenses %}<a href="{{ url_for('segment.expenses') }}">Expenses</a>{% endif %}
+    {% if can_profit %}<a href="{{ url_for('segment.mis_report') }}">MIS</a>{% endif %}
+    {% if is_admin %}<a href="{{ url_for('users') }}">Team</a>{% endif %}
+    {% if is_admin %}<a href="{{ url_for('ar.audit_view') }}">Audit</a>{% endif %}
+  </nav>
+</header>
+<main>
+  {% with messages = get_flashed_messages() %}
+    {% if messages %}<div class="msg">{{ messages[0] }}</div>{% endif %}
+  {% endwith %}
+  {% block content %}{% endblock %}
+</main>
+</body>
+</html>

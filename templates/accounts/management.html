@@ -1,0 +1,110 @@
+{% extends "accounts/layout.html" %}
+
+{% block title %}Management Dashboard{% endblock %}
+
+{% block content %}
+
+<div class="cards">
+
+  <div class="stat"><div class="lbl">Total Revenue</div><div class="val">₹ {{ "{:,.0f}".format(summary.get('TotalInvoiced') or 0) }}</div></div>
+
+  <div class="stat"><div class="lbl">Total Expense</div><div class="val">₹ {{ "{:,.0f}".format(summary.get('TotalExpenses') or month_expense) }}</div></div>
+
+  <div class="stat"><div class="lbl">Total Profit</div><div class="val">₹ {{ "{:,.0f}".format(summary.get('TotalProfit') or 0) }}</div></div>
+
+  <div class="stat"><div class="lbl">Outstanding</div><div class="val out-pos">₹ {{ "{:,.0f}".format(summary.get('TotalOutstanding') or 0) }}</div></div>
+
+  <div class="stat"><div class="lbl">GST Receivable</div><div class="val">₹ {{ "{:,.0f}".format(summary.get('TotalGstReceivable') or 0) }}</div></div>
+
+  <div class="stat"><div class="lbl">TDS Deducted</div><div class="val">₹ {{ "{:,.0f}".format(summary.get('TotalTdsDeducted') or 0) }}</div></div>
+
+</div>
+
+
+
+<div class="card" style="margin-top:16px">
+
+  <h2>Segment P&amp;L</h2>
+
+  <table>
+
+    <thead><tr><th>Segment</th><th>Revenue</th><th>Expense</th><th>Profit</th><th>Profit %</th></tr></thead>
+
+    <tbody>
+
+      {% for r in segment_pl %}
+
+      <tr>
+
+        <td>{{ r.BusinessSegmentName }}</td>
+
+        <td class="num">₹ {{ "{:,.0f}".format(r.Revenue or 0) }}</td>
+
+        <td class="num">₹ {{ "{:,.0f}".format(r.Expense or 0) }}</td>
+
+        <td class="num">₹ {{ "{:,.0f}".format(r.Profit or 0) }}</td>
+
+        <td class="num">{{ "{:.1f}".format(r.ProfitPercent or 0) }}%</td>
+
+      </tr>
+
+      {% endfor %}
+
+    </tbody>
+
+  </table>
+
+</div>
+
+
+
+<div class="card">
+
+  <h2>Monthly Trend (last 12 months)</h2>
+
+  <table>
+
+    <thead><tr><th>Segment</th><th>Month</th><th>Revenue</th><th>Expense</th><th>Profit</th><th>Collected</th></tr></thead>
+
+    <tbody>
+
+      {% for t in trend %}
+
+      <tr>
+
+        <td>{{ t.BusinessSegmentName }}</td>
+
+        <td>{{ "%02d"|format(t.PeriodMonth) }}/{{ t.PeriodYear }}</td>
+
+        <td class="num">{{ "{:,.0f}".format(t.Revenue or 0) }}</td>
+
+        <td class="num">{{ "{:,.0f}".format(t.Expense or 0) }}</td>
+
+        <td class="num">{{ "{:,.0f}".format(t.Profit or 0) }}</td>
+
+        <td class="num">{{ "{:,.0f}".format(t.Collected or 0) }}</td>
+
+      </tr>
+
+      {% endfor %}
+
+    </tbody>
+
+  </table>
+
+</div>
+
+
+
+<div class="card">
+
+  <a class="btn primary" href="{{ url_for('segment.mis_report') }}">Monthly MIS Report</a>
+
+  <a class="btn ghost" href="{{ url_for('segment.expenses') }}">Expense Register</a>
+
+  <a class="btn ghost" href="{{ url_for('segment.export_report', report='mis', fmt='xlsx') }}">Export MIS Excel</a>
+
+</div>
+
+{% endblock %}
+

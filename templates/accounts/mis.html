@@ -1,0 +1,96 @@
+{% extends "accounts/layout.html" %}
+
+{% block title %}Monthly MIS{% endblock %}
+
+{% block content %}
+
+<div class="card">
+
+  <h2>Monthly MIS — {{ "%02d"|format(mis.month) }}/{{ mis.year }}</h2>
+
+  <form method="get" class="grid2" style="max-width:400px">
+
+    <div><label>Year</label><input name="year" type="number" value="{{ mis.year }}"></div>
+
+    <div><label>Month</label><input name="month" type="number" min="1" max="12" value="{{ mis.month }}"></div>
+
+    <div style="grid-column:1/-1"><button class="btn primary" type="submit">Show</button></div>
+
+  </form>
+
+</div>
+
+
+
+<div class="card">
+
+  <h2>Segment Summary</h2>
+
+  <table>
+
+    <thead><tr><th>Segment</th><th>Revenue</th><th>Expense</th><th>Profit</th><th>%</th><th>Outstanding</th><th>Collected</th></tr></thead>
+
+    <tbody>
+
+      {% for r in mis.profitability %}
+
+      {% set seg = mis.segments | selectattr('BusinessSegmentId', 'equalto', r.BusinessSegmentId) | first %}
+
+      <tr>
+
+        <td>{{ r.BusinessSegmentName }}</td>
+
+        <td class="num">₹ {{ "{:,.0f}".format(r.Revenue or 0) }}</td>
+
+        <td class="num">₹ {{ "{:,.0f}".format(r.Expense or 0) }}</td>
+
+        <td class="num">₹ {{ "{:,.0f}".format(r.Profit or 0) }}</td>
+
+        <td class="num">{{ "{:.1f}".format(r.ProfitPercent or 0) }}%</td>
+
+        <td class="num">₹ {{ "{:,.0f}".format(seg.Outstanding if seg else 0) }}</td>
+
+        <td class="num">₹ {{ "{:,.0f}".format(seg.TotalCollected if seg else 0) }}</td>
+
+      </tr>
+
+      {% endfor %}
+
+    </tbody>
+
+  </table>
+
+</div>
+
+
+
+<div class="grid2" style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+
+  <div class="card"><h2>Top Clients</h2>
+
+    <table><thead><tr><th>Client</th><th>Revenue</th></tr></thead>
+
+    <tbody>{% for c in mis.top_clients %}<tr><td>{{ c.ClientName }}</td><td class="num">₹ {{ "{:,.0f}".format(c.Revenue or 0) }}</td></tr>{% endfor %}</tbody></table>
+
+  </div>
+
+  <div class="card"><h2>Top Expenses</h2>
+
+    <table><thead><tr><th>Category</th><th>Amount</th></tr></thead>
+
+    <tbody>{% for e in mis.top_expenses %}<tr><td>{{ e.CategoryName }}</td><td class="num">₹ {{ "{:,.0f}".format(e.Expense or 0) }}</td></tr>{% endfor %}</tbody></table>
+
+  </div>
+
+</div>
+
+
+
+<div class="card">
+
+  <a class="btn primary" href="{{ url_for('segment.export_report', report='mis', fmt='xlsx', year=mis.year, month=mis.month) }}">Export MIS Excel</a>
+
+</div>
+
+{% endblock %}
+

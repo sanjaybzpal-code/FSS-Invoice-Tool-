@@ -1,0 +1,67 @@
+{% extends "accounts/layout.html" %}
+{% block title %}Client Ledger{% endblock %}
+{% block content %}
+<div class="card">
+  <h2>Client Ledger (Tally-style)</h2>
+  <form method="get">
+    <div class="grid2">
+      <div>
+        <label>Client *</label>
+        <select name="client_id" required>
+          <option value="">— Select client —</option>
+          {% for c in clients %}
+          <option value="{{ c.ClientId }}" {% if client_id==c.ClientId %}selected{% endif %}>{{ c.ClientName }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      {% if not user_segment_id %}
+      <div>
+        <label>Segment Filter</label>
+        <select name="segment_id">
+          <option value="">All Segments</option>
+          {% for s in segments %}
+          <option value="{{ s.BusinessSegmentId }}" {% if segment_id==s.BusinessSegmentId %}selected{% endif %}>{{ s.BusinessSegmentName }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      {% endif %}
+      <div style="display:flex;gap:8px;align-items:flex-end">
+        <div style="flex:1"><label>From</label><input name="from_date" value="{{ from_date }}" placeholder="dd-mm-yyyy"></div>
+        <div style="flex:1"><label>To</label><input name="to_date" value="{{ to_date }}" placeholder="dd-mm-yyyy"></div>
+        <button class="btn primary" type="submit">Show</button>
+      </div>
+    </div>
+  </form>
+  {% if client %}
+  <p style="margin-top:12px;font-size:13px">
+    <b>{{ client.ClientName }}</b> | GSTIN: {{ client.GSTIN or '-' }} |
+    Tax Invoiced: ₹ {{ "{:,.2f}".format(summary.get('TotalTaxInvoiced') or 0) }} |
+    Non-GST: ₹ {{ "{:,.2f}".format(summary.get('TotalNonGstBilled') or 0) }} |
+    Cash: ₹ {{ "{:,.2f}".format(summary.get('TotalReceived') or 0) }} |
+    TDS: ₹ {{ "{:,.2f}".format(summary.get('TotalTdsDeducted') or 0) }} |
+    Outstanding: <span class="out-pos">₹ {{ "{:,.2f}".format(summary.get('Outstanding') or 0) }}</span>
+  </p>
+  <div style="margin:10px 0">
+    <a class="btn primary" href="{{ url_for('accounts.ledger_export', fmt='pdf', client_id=client_id, from_date=from_date, to_date=to_date) }}">Generate Client Ledger PDF</a>
+    <a class="btn ghost" href="{{ url_for('accounts.ledger_export', fmt='excel', client_id=client_id, from_date=from_date, to_date=to_date) }}">Export Excel</a>
+  </div>
+  <table>
+    <thead><tr><th>Date</th><th>Voucher No.</th><th>Particulars</th><th>Debit</th><th>Credit</th><th>Running Balance</th></tr></thead>
+    <tbody>
+      {% for row in ledger %}
+      <tr>
+        <td>{{ row.Date.strftime('%d-%m-%Y') if row.Date else row.Date }}</td>
+        <td>{{ row.VoucherNo }}</td>
+        <td>{{ row.Particulars }}</td>
+        <td class="num">{{ "{:,.2f}".format(row.Debit or 0) if row.Debit else '' }}</td>
+        <td class="num">{{ "{:,.2f}".format(row.Credit or 0) if row.Credit else '' }}</td>
+        <td class="num"><b>{{ "{:,.2f}".format(row.RunningBalance or 0) }}</b></td>
+      </tr>
+      {% else %}
+      <tr><td colspan="6">No transactions for this client.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+</div>
+{% endblock %}

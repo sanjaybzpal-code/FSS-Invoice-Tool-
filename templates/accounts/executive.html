@@ -1,0 +1,49 @@
+{% extends "accounts/layout.html" %}
+{% block title %}Executive Dashboard{% endblock %}
+{% block content %}
+<div class="cards">
+  <div class="stat"><div class="lbl">Total Invoiced</div><div class="val">₹ {{ "{:,.0f}".format(summary.get('TotalInvoiced') or 0) }}</div></div>
+  <div class="stat"><div class="lbl">Total Received</div><div class="val">₹ {{ "{:,.0f}".format(summary.get('TotalReceived') or 0) }}</div></div>
+  <div class="stat"><div class="lbl">Outstanding</div><div class="val out-pos">₹ {{ "{:,.0f}".format(summary.get('TotalOutstanding') or 0) }}</div></div>
+  <div class="stat"><div class="lbl">GST Receivable</div><div class="val">₹ {{ "{:,.0f}".format(summary.get('TotalGstReceivable') or 0) }}</div></div>
+  <div class="stat"><div class="lbl">TDS Deducted</div><div class="val">₹ {{ "{:,.0f}".format(summary.get('TotalTdsDeducted') or 0) }}</div></div>
+  <div class="stat"><div class="lbl">Active Clients</div><div class="val">{{ summary.get('TotalActiveClients') or 0 }}</div></div>
+  {% if summary.get('TotalExpenses') is not none %}
+  <div class="stat"><div class="lbl">Total Expenses</div><div class="val">₹ {{ "{:,.0f}".format(summary.get('TotalExpenses') or 0) }}</div></div>
+  <div class="stat"><div class="lbl">Total Profit</div><div class="val">₹ {{ "{:,.0f}".format(summary.get('TotalProfit') or 0) }}</div></div>
+  {% endif %}
+</div>
+
+{% if seg_cards.get('segments') %}
+<div class="card">
+  <h2>Segment Revenue &amp; Outstanding</h2>
+  <table>
+    <thead><tr><th>Segment</th><th>Revenue</th><th>Collected</th><th>Outstanding</th></tr></thead>
+    <tbody>
+      {% for s in seg_cards.segments %}
+      <tr>
+        <td>{{ s.BusinessSegmentName }}</td>
+        <td class="num">₹ {{ "{:,.0f}".format(s.TotalRevenue or 0) }}</td>
+        <td class="num">₹ {{ "{:,.0f}".format(s.TotalCollected or 0) }}</td>
+        <td class="num out-pos">₹ {{ "{:,.0f}".format(s.Outstanding or 0) }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+<div class="grid2" style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+  <div class="card"><h2>Top Clients by Revenue</h2>
+    <table><thead><tr><th>Client</th><th>Revenue</th></tr></thead>
+    <tbody>{% for r in charts.get('top_revenue',[]) %}<tr><td>{{ r.ClientName }}</td><td class="num">₹ {{ "{:,.0f}".format(r.Revenue or r.Amount or 0) }}</td></tr>{% endfor %}</tbody></table>
+  </div>
+  <div class="card"><h2>Top Outstanding</h2>
+    <table><thead><tr><th>Client</th><th>Outstanding</th></tr></thead>
+    <tbody>{% for r in charts.get('top_outstanding',[]) %}<tr><td>{{ r.ClientName }}</td><td class="num out-pos">₹ {{ "{:,.0f}".format(r.Outstanding or r.Amount or 0) }}</td></tr>{% endfor %}</tbody></table>
+  </div>
+</div>
+<div class="card"><h2>Monthly Revenue</h2>
+  <table><thead><tr><th>Year</th><th>Month</th><th>Revenue</th></tr></thead>
+  <tbody>{% for r in charts.get('revenue',[]) %}<tr><td>{{ r.Yr or r.Y }}</td><td>{{ r.Mo or r.M }}</td><td class="num">₹ {{ "{:,.0f}".format(r.Revenue or r.Amount or 0) }}</td></tr>{% endfor %}</tbody></table>
+</div>
+{% endblock %}

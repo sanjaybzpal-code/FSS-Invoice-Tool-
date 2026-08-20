@@ -1,0 +1,240 @@
+{% extends "accounts/layout.html" %}
+
+{% block title %}Edit Invoice{% endblock %}
+
+{% block content %}
+
+<style>
+  .edit-section { margin-bottom: 18px; }
+  .grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+  .items-table { width: 100%; border-collapse: collapse; font-size: 14px; margin-top: 8px; }
+  .items-table th { background: var(--navy); color: #fff; padding: 8px 10px; text-align: left; font-size: 12px; }
+  .items-table td { padding: 6px 4px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+  .items-table input { width: 100%; padding: 7px 8px; border: 1px solid var(--line); border-radius: 6px; font-size: 13px; }
+  .items-table .amt-col { text-align: right; }
+  .items-table .amt-col input { text-align: right; }
+  .del-btn { background: #fee2e2; color: #b91c1c; border: none; border-radius: 6px;
+             padding: 5px 10px; cursor: pointer; font-size: 13px; font-weight: 700; }
+  .del-btn:hover { background: #fca5a5; }
+  .add-row-btn { background: #eff6ff; color: var(--navy); border: 1px solid var(--navy2);
+                 border-radius: 7px; padding: 7px 14px; cursor: pointer; font-size: 13px;
+                 font-weight: 600; margin-top: 8px; }
+  .add-row-btn:hover { background: #dbeafe; }
+  .totals-box { background: #f8fafc; border: 1px solid var(--line); border-radius: 8px;
+                padding: 14px 18px; margin-top: 12px; font-size: 14px; }
+  .totals-box .t-row { display: flex; justify-content: space-between; padding: 3px 0; }
+  .totals-box .t-total { font-weight: 800; font-size: 16px; color: var(--navy); border-top: 1px solid var(--line); margin-top: 6px; padding-top: 6px; }
+  .regen-box { background: #fefce8; border: 1px solid #fde047; border-radius: 8px;
+               padding: 12px 14px; margin-top: 14px; }
+  .regen-box label { display: flex; align-items: center; gap: 8px; cursor: pointer;
+                     font-size: 13px; font-weight: 600; margin: 0; }
+  .regen-box input[type=checkbox] { width: 16px; height: 16px; margin: 0; }
+  .regen-note { font-size: 12px; color: #92400e; margin-top: 4px; font-weight: 400; }
+</style>
+
+<div class="card">
+  <h2>Edit Invoice — {{ invoice.InvoiceNumber }}</h2>
+  <p style="font-size:13px;color:var(--muted);margin:0 0 16px">
+    All fields are editable. Tick "Regenerate files" to also update the PDF & Excel on disk.
+  </p>
+
+  <form method="post" id="editForm">
+
+    <!-- ── Core fields ── -->
+    <div class="edit-section">
+      <div class="grid2">
+
+        <div>
+          <label>Client *</label>
+          <select name="client_id" id="clientSelect" required onchange="updateSupplyType()">
+            {% for c in clients %}
+            <option value="{{ c.ClientId }}"
+              data-mh="{{ c.MhState }}"
+              {% if c.ClientId == invoice.ClientId %}selected{% endif %}>
+              {{ c.ClientName }}
+            </option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div>
+          <label>Invoice Date</label>
+          <input name="invoice_date"
+                 value="{{ invoice.InvoiceDate.strftime('%d-%m-%Y') if invoice.InvoiceDate else '' }}"
+                 placeholder="dd-mm-yyyy">
+        </div>
+
+        <div>
+          <label>Business Segment *</label>
+          <select name="segment_id" required>
+            {% for s in segments %}
+            <option value="{{ s.BusinessSegmentId }}"
+              {% if invoice.BusinessSegmentId == s.BusinessSegmentId %}selected{% endif %}>
+              {{ s.BusinessSegmentName }}
+            </option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div>
+          <label>Supply Type (Tax)</label>
+          <select name="supply_type" id="supplyType">
+            <option value="CGST_SGST" {% if invoice.SupplyType == 'CGST_SGST' %}selected{% endif %}>
+              CGST 9% + SGST 9% (Intra-State / Maharashtra)
+            </option>
+            <option value="IGST" {% if invoice.SupplyType == 'IGST' %}selected{% endif %}>
+              IGST 18% (Inter-State / Outside Maharashtra)
+            </option>
+          </select>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ── Line Items ── -->
+    <div class="edit-section">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+        <strong style="font-size:13px;color:var(--navy)">Line Items (Particulars)</strong>
+      </div>
+
+      <table class="items-table">
+        <thead>
+          <tr>
+            <th style="width:36px">#</th>
+            <th>Particulars</th>
+            <th style="width:130px">Work Date</th>
+            <th style="width:140px;text-align:right">Amount (₹)</th>
+            <th style="width:40px"></th>
+          </tr>
+        </thead>
+        <tbody id="itemsBody">
+          {% for item in line_items %}
+          <tr class="item-row">
+            <td style="text-align:center" class="sr-no">{{ loop.index }}</td>
+            <td><input type="text" name="particulars[]" value="{{ item.Particulars }}" placeholder="Description of work" required></td>
+            <td><input type="text" name="item_date[]"
+                       value="{{ item.WorkDate.strftime('%d-%m-%Y') if item.WorkDate else '' }}"
+                       placeholder="dd-mm-yyyy"></td>
+            <td class="amt-col"><input type="number" name="amount[]"
+                   value="{{ '%.2f' % item.Amount }}" step="0.01" min="0"
+                   oninput="recalcTotals()" placeholder="0.00"></td>
+            <td><button type="button" class="del-btn" onclick="removeRow(this)">✕</button></td>
+          </tr>
+          {% else %}
+          <tr class="item-row">
+            <td style="text-align:center" class="sr-no">1</td>
+            <td><input type="text" name="particulars[]" placeholder="Description of work" required></td>
+            <td><input type="text" name="item_date[]" placeholder="dd-mm-yyyy"></td>
+            <td class="amt-col"><input type="number" name="amount[]" step="0.01" min="0"
+                   oninput="recalcTotals()" placeholder="0.00"></td>
+            <td><button type="button" class="del-btn" onclick="removeRow(this)">✕</button></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+
+      <button type="button" class="add-row-btn" onclick="addRow()">+ Add Row</button>
+
+      <!-- Totals preview -->
+      <div class="totals-box">
+        <div class="t-row"><span>Taxable Amount</span><span id="t-subtotal">₹ 0.00</span></div>
+        <div class="t-row" id="row-cgst"><span>CGST @ 9%</span><span id="t-cgst">₹ 0.00</span></div>
+        <div class="t-row" id="row-sgst"><span>SGST @ 9%</span><span id="t-sgst">₹ 0.00</span></div>
+        <div class="t-row" id="row-igst" style="display:none"><span>IGST @ 18%</span><span id="t-igst">₹ 0.00</span></div>
+        <div class="t-row t-total"><span>Grand Total</span><span id="t-total">₹ 0.00</span></div>
+      </div>
+    </div>
+
+    <!-- ── Regenerate option ── -->
+    <div class="regen-box">
+      <label>
+        <input type="checkbox" name="regenerate" value="1">
+        Also regenerate PDF &amp; Excel files on disk
+      </label>
+      <div class="regen-note">
+        ⚠ If unticked, only the database records &amp; reports are updated. The existing files on disk remain unchanged.
+      </div>
+    </div>
+
+    <!-- ── Actions ── -->
+    <div style="margin-top:18px;display:flex;gap:8px;align-items:center">
+      <button class="btn primary" type="submit">Save Changes</button>
+      <a class="btn ghost" href="{{ url_for('accounts.invoices') }}">Cancel</a>
+    </div>
+
+  </form>
+</div>
+
+<script>
+function fmt(n) {
+  return '₹ ' + n.toLocaleString('en-IN', {minimumFractionDigits:2, maximumFractionDigits:2});
+}
+
+function recalcTotals() {
+  const amts = document.querySelectorAll('#itemsBody input[name="amount[]"]');
+  let sub = 0;
+  amts.forEach(a => { sub += parseFloat(a.value || 0) || 0; });
+  const isIGST = document.getElementById('supplyType').value === 'IGST';
+  let cgst = 0, sgst = 0, igst = 0;
+  if (isIGST) {
+    igst = Math.round(sub * 0.18 * 100) / 100;
+  } else {
+    cgst = Math.round(sub * 0.09 * 100) / 100;
+    sgst = Math.round(sub * 0.09 * 100) / 100;
+  }
+  const total = sub + cgst + sgst + igst;
+  document.getElementById('t-subtotal').textContent = fmt(sub);
+  document.getElementById('t-cgst').textContent = fmt(cgst);
+  document.getElementById('t-sgst').textContent = fmt(sgst);
+  document.getElementById('t-igst').textContent = fmt(igst);
+  document.getElementById('t-total').textContent = fmt(total);
+  document.getElementById('row-cgst').style.display = isIGST ? 'none' : '';
+  document.getElementById('row-sgst').style.display = isIGST ? 'none' : '';
+  document.getElementById('row-igst').style.display = isIGST ? '' : 'none';
+}
+
+document.getElementById('supplyType').addEventListener('change', recalcTotals);
+
+function updateSupplyType() {
+  const sel = document.getElementById('clientSelect');
+  const opt = sel.options[sel.selectedIndex];
+  const mh = parseInt(opt.getAttribute('data-mh') || '0');
+  document.getElementById('supplyType').value = mh ? 'CGST_SGST' : 'IGST';
+  recalcTotals();
+}
+
+function renumber() {
+  document.querySelectorAll('#itemsBody .item-row').forEach((row, i) => {
+    const sr = row.querySelector('.sr-no');
+    if (sr) sr.textContent = i + 1;
+  });
+}
+
+function addRow() {
+  const tbody = document.getElementById('itemsBody');
+  const tr = document.createElement('tr');
+  tr.className = 'item-row';
+  tr.innerHTML = `
+    <td style="text-align:center" class="sr-no">${tbody.rows.length + 1}</td>
+    <td><input type="text" name="particulars[]" placeholder="Description of work"></td>
+    <td><input type="text" name="item_date[]" placeholder="dd-mm-yyyy"></td>
+    <td class="amt-col"><input type="number" name="amount[]" step="0.01" min="0"
+           oninput="recalcTotals()" placeholder="0.00"></td>
+    <td><button type="button" class="del-btn" onclick="removeRow(this)">✕</button></td>`;
+  tbody.appendChild(tr);
+  renumber();
+}
+
+function removeRow(btn) {
+  const rows = document.querySelectorAll('#itemsBody .item-row');
+  if (rows.length <= 1) { alert('At least one line item is required.'); return; }
+  btn.closest('tr').remove();
+  renumber();
+  recalcTotals();
+}
+
+// Init totals on page load
+recalcTotals();
+</script>
+
+{% endblock %}

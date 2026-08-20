@@ -1,0 +1,222 @@
+{% extends "accounts/layout.html" %}
+
+{% block title %}Non-GST Bills{% endblock %}
+
+{% block content %}
+
+<div class="card">
+
+  <h2>Non-GST Bills</h2>
+
+  <p style="font-size:13px;color:var(--muted);margin:0 0 14px">
+
+    Record amounts billed or received <b>without GST</b> (cash / informal).
+
+    These appear separately in the ledger and outstanding — they do <b>not</b> affect GST reports.
+
+  </p>
+
+</div>
+
+
+
+{% if edit_bill %}
+
+<div class="card">
+
+  <h2>Edit — {{ edit_bill.BillNumber }}</h2>
+
+  <form method="post">
+
+    <input type="hidden" name="action" value="edit">
+
+    <input type="hidden" name="bill_id" value="{{ edit_bill.NonGstBillId }}">
+
+    <div class="grid2">
+
+      <div><label>Bill Number</label><input value="{{ edit_bill.BillNumber }}" disabled></div>
+
+      <div><label>Client</label><input value="{{ edit_bill.ClientName }}" disabled></div>
+
+      <div><label>Date</label><input name="bill_date" value="{{ edit_bill.BillDate.strftime('%d-%m-%Y') if edit_bill.BillDate else '' }}"></div>
+
+      <div><label>Amount *</label><input name="amount" type="number" step="0.01" value="{{ edit_bill.Amount }}" required></div>
+
+      <div style="grid-column:1/-1"><label>Description *</label><input name="description" value="{{ edit_bill.Description }}" required></div>
+
+      <div><label>Segment</label>
+
+        <select name="segment_id">
+
+          {% for s in segments %}
+
+          <option value="{{ s.BusinessSegmentId }}" {% if edit_bill.BusinessSegmentId==s.BusinessSegmentId %}selected{% endif %}>{{ s.BusinessSegmentName }}</option>
+
+          {% endfor %}
+
+        </select>
+
+      </div>
+
+      <div><label>Remarks</label><input name="remarks" value="{{ edit_bill.Remarks or '' }}"></div>
+
+    </div>
+
+    <div style="margin-top:12px;display:flex;gap:8px">
+
+      <button class="btn primary" type="submit">Save</button>
+
+      <a class="btn ghost" href="{{ url_for('accounts.non_gst_bills') }}">Cancel</a>
+
+    </div>
+
+  </form>
+
+</div>
+
+{% else %}
+
+<div class="card">
+
+  <h2>Record Non-GST Bill</h2>
+
+  <form method="post">
+
+    <input type="hidden" name="action" value="add">
+
+    <div class="grid2">
+
+      <div><label>Bill Number</label><input value="{{ next_bill }}" disabled><input type="hidden" name="bill_number" value="{{ next_bill }}"></div>
+
+      <div><label>Date</label><input name="bill_date" value="{{ today }}" placeholder="dd-mm-yyyy"></div>
+
+      <div><label>Client *</label>
+
+        <select name="client_id" required>
+
+          <option value="">— Select —</option>
+
+          {% for c in clients %}<option value="{{ c.ClientId }}" {% if client_id==c.ClientId %}selected{% endif %}>{{ c.ClientName }}</option>{% endfor %}
+
+        </select>
+
+      </div>
+
+      <div><label>Amount (no GST) *</label><input name="amount" type="number" step="0.01" min="0.01" required></div>
+
+      <div style="grid-column:1/-1"><label>Description *</label><input name="description" placeholder="Work / service description" required></div>
+
+      <div><label>Business Segment</label>
+
+        <select name="segment_id">
+
+          {% for s in segments %}<option value="{{ s.BusinessSegmentId }}">{{ s.BusinessSegmentName }}</option>{% endfor %}
+
+        </select>
+
+      </div>
+
+      <div><label>Remarks</label><input name="remarks"></div>
+
+    </div>
+
+    <button class="btn primary" type="submit" style="margin-top:12px">Save Non-GST Bill</button>
+
+  </form>
+
+</div>
+
+{% endif %}
+
+
+
+<div class="card">
+
+  <h2>Non-GST Bill Register</h2>
+
+  <form method="get" style="margin-bottom:12px;display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end">
+
+    <div><label>Client</label>
+
+      <select name="client_id" onchange="this.form.submit()">
+
+        <option value="">All</option>
+
+        {% for c in clients %}<option value="{{ c.ClientId }}" {% if client_id==c.ClientId %}selected{% endif %}>{{ c.ClientName }}</option>{% endfor %}
+
+      </select>
+
+    </div>
+
+    {% if not user_segment_id %}
+
+    <div><label>Segment</label>
+
+      <select name="segment_id" onchange="this.form.submit()">
+
+        <option value="">All</option>
+
+        {% for s in segments %}<option value="{{ s.BusinessSegmentId }}" {% if segment_id==s.BusinessSegmentId %}selected{% endif %}>{{ s.BusinessSegmentName }}</option>{% endfor %}
+
+      </select>
+
+    </div>
+
+    {% endif %}
+
+  </form>
+
+  <table>
+
+    <thead><tr><th>Date</th><th>Bill No.</th><th>Client</th><th>Description</th><th>Segment</th><th>Amount</th><th></th></tr></thead>
+
+    <tbody>
+
+      {% for b in bills %}
+
+      <tr>
+
+        <td>{{ b.BillDate.strftime('%d-%m-%Y') if b.BillDate else b.BillDate }}</td>
+
+        <td><b>{{ b.BillNumber }}</b></td>
+
+        <td><a href="{{ url_for('accounts.client_detail', client_id=b.ClientId) }}">{{ b.ClientName }}</a></td>
+
+        <td>{{ b.Description }}</td>
+
+        <td>{{ b.BusinessSegmentName or '-' }}</td>
+
+        <td class="num">₹ {{ "{:,.2f}".format(b.Amount) }}</td>
+
+        <td>
+
+          <a class="btn ghost" style="padding:4px 8px;font-size:12px" href="{{ url_for('accounts.non_gst_bills', edit=b.NonGstBillId) }}">Edit</a>
+
+          <form method="post" style="display:inline" onsubmit="return confirm('Delete this Non-GST bill?');">
+
+            <input type="hidden" name="action" value="delete">
+
+            <input type="hidden" name="bill_id" value="{{ b.NonGstBillId }}">
+
+            <button class="btn ghost" style="padding:4px 8px;font-size:12px;color:#b42318" type="submit">Del</button>
+
+          </form>
+
+        </td>
+
+      </tr>
+
+      {% else %}
+
+      <tr><td colspan="7">No Non-GST bills recorded yet.</td></tr>
+
+      {% endfor %}
+
+    </tbody>
+
+  </table>
+
+</div>
+
+{% endblock %}
+
