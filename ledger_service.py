@@ -9,6 +9,13 @@ from typing import Any
 import db
 
 
+def _snap():
+    if db.use_snapshot_fallback():
+        import vercel_snapshot as vs
+        return vs
+    return None
+
+
 def _rows(cursor) -> list[dict]:
     cols = [c[0] for c in cursor.description] if cursor.description else []
     return [dict(zip(cols, row)) for row in cursor.fetchall()]
@@ -63,6 +70,9 @@ def upsert_client(name: str, gstin: str = "", address: str = "",
 
 
 def list_clients(active_only: bool = True) -> list[dict]:
+    s = _snap()
+    if s:
+        return s.list_clients(active_only)
     with db.get_connection() as conn:
         cur = conn.cursor()
         sql = "SELECT * FROM dbo.ClientMaster"
@@ -255,6 +265,9 @@ def create_non_gst_bill(client_id: int, bill_date: str, amount: float,
 
 def list_non_gst_bills(client_id: int | None = None, limit: int = 500,
                        segment_id: int | None = None) -> list[dict]:
+    s = _snap()
+    if s:
+        return s.list_non_gst_bills(client_id, limit, segment_id)
     with db.get_connection() as conn:
         cur = conn.cursor()
         sql = """SELECT TOP (?) n.*, c.ClientName, s.BusinessSegmentName
@@ -351,6 +364,9 @@ def next_proforma_number() -> str:
 
 
 def peek_proforma_number() -> str:
+    s = _snap()
+    if s:
+        return s.peek_proforma_number()
     with db.get_connection() as conn:
         cur = conn.cursor()
         cur.execute("SELECT NextValue FROM dbo.LedgerSequence WHERE SeqName = N'PROFORMA'")
@@ -362,6 +378,9 @@ def peek_proforma_number() -> str:
 def list_invoices(client_id: int | None = None, limit: int = 500,
                   segment_id: int | None = None,
                   invoice_type: str | None = None) -> list[dict]:
+    s = _snap()
+    if s:
+        return s.list_invoices(client_id, limit, segment_id, invoice_type)
     with db.get_connection() as conn:
         cur = conn.cursor()
         sql = """SELECT TOP (?) i.*, c.ClientName, s.BusinessSegmentName
@@ -385,6 +404,9 @@ def list_invoices(client_id: int | None = None, limit: int = 500,
 
 
 def get_invoice(invoice_id: int) -> dict | None:
+    s = _snap()
+    if s:
+        return s.get_invoice(invoice_id)
     with db.get_connection() as conn:
         cur = conn.cursor()
         cur.execute(
@@ -399,6 +421,9 @@ def get_invoice(invoice_id: int) -> dict | None:
 
 def get_invoice_line_items(invoice_id: int) -> list[dict]:
     """Return all line items for an invoice, ordered by SrNo."""
+    s = _snap()
+    if s:
+        return s.get_invoice_line_items(invoice_id)
     with db.get_connection() as conn:
         cur = conn.cursor()
         cur.execute(
@@ -651,6 +676,9 @@ def _allocate_receipt(cur, receipt_id: int, client_id: int, amount: float,
 
 
 def list_receipts(client_id: int | None = None, limit: int = 200) -> list[dict]:
+    s = _snap()
+    if s:
+        return s.list_receipts(client_id, limit)
     with db.get_connection() as conn:
         cur = conn.cursor()
         if client_id:
@@ -669,6 +697,9 @@ def list_receipts(client_id: int | None = None, limit: int = 200) -> list[dict]:
 
 
 def get_receipt(receipt_id: int) -> dict | None:
+    s = _snap()
+    if s:
+        return s.get_receipt(receipt_id)
     with db.get_connection() as conn:
         cur = conn.cursor()
         cur.execute(
@@ -710,6 +741,9 @@ def client_open_invoices(client_id: int) -> list[dict]:
 
 # --- Reports -----------------------------------------------------------------
 def outstanding_dashboard() -> dict:
+    s = _snap()
+    if s:
+        return s.outstanding_dashboard()
     with db.get_connection() as conn:
         cur = conn.cursor()
         cur.execute("EXEC dbo.sp_GetOutstandingDashboard")
@@ -717,6 +751,9 @@ def outstanding_dashboard() -> dict:
 
 
 def client_outstanding_list() -> list[dict]:
+    s = _snap()
+    if s:
+        return s.client_outstanding_list()
     with db.get_connection() as conn:
         cur = conn.cursor()
         cur.execute(
@@ -725,6 +762,9 @@ def client_outstanding_list() -> list[dict]:
 
 
 def client_summary(client_id: int) -> dict | None:
+    s = _snap()
+    if s:
+        return s.client_summary(client_id)
     with db.get_connection() as conn:
         cur = conn.cursor()
         cur.execute("EXEC dbo.sp_GetClientSummary ?", client_id)
@@ -734,6 +774,9 @@ def client_summary(client_id: int) -> dict | None:
 def client_ledger(client_id: int, from_date: str | None = None,
                   to_date: str | None = None,
                   segment_id: int | None = None) -> list[dict]:
+    s = _snap()
+    if s:
+        return s.client_ledger(client_id, from_date, to_date, segment_id)
     fd = _parse_date(from_date) if from_date else None
     td = _parse_date(to_date) if to_date else None
     with db.get_connection() as conn:

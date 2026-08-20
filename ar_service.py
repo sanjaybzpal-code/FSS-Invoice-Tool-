@@ -62,6 +62,9 @@ def _parse_date(value) -> date | None:
 
 # --- Reminders ---------------------------------------------------------------
 def reminder_dashboard() -> dict:
+    if db.use_snapshot_fallback():
+        import vercel_snapshot as vs
+        return vs.reminder_dashboard()
     with db.get_connection() as conn:
         cur = conn.cursor()
         cur.execute("EXEC dbo.sp_GetReminderDashboard")
@@ -447,6 +450,9 @@ def profitability_top_bottom(n: int = 10, segment_id: int | None = None) -> tupl
 
 # --- Executive ---------------------------------------------------------------
 def executive_summary() -> dict:
+    if db.use_snapshot_fallback():
+        import vercel_snapshot as vs
+        return vs.executive_summary()
     with db.get_connection() as conn:
         cur = conn.cursor()
         cur.execute("SELECT * FROM dbo.vw_ExecutiveDashboard")

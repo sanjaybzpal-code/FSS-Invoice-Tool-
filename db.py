@@ -89,6 +89,17 @@ def vercel_db_configured() -> bool:
         return False
 
 
+def use_snapshot_fallback() -> bool:
+    """Vercel without Azure SQL — use bundled vercel_data/snapshot.json."""
+    if not _is_vercel() or vercel_db_configured():
+        return False
+    try:
+        import vercel_snapshot as vs
+        return vs.snapshot_available()
+    except ImportError:
+        return False
+
+
 def _import_pyodbc():
     import pyodbc
     return pyodbc
@@ -184,6 +195,12 @@ def migrate(config: dict | None = None) -> str:
 
 
 def test_connection(config: dict | None = None) -> tuple[bool, str]:
+    if use_snapshot_fallback():
+        import vercel_snapshot as vs
+        s = vs.stats()
+        return True, (
+            f"Cloud snapshot active — {s['invoices']} invoices, "
+            f"{s['receipts']} receipts, {s['clients']} clients")
     try:
         with get_connection(config) as conn:
             cur = conn.cursor()

@@ -18,6 +18,9 @@ def _row(cur) -> dict | None:
 
 
 def list_segments(active_only: bool = True) -> list[dict]:
+    if db.use_snapshot_fallback():
+        import vercel_snapshot as vs
+        return vs.list_segments(active_only)
     with db.get_connection() as conn:
         cur = conn.cursor()
         sql = "SELECT * FROM dbo.BusinessSegments"
@@ -75,6 +78,9 @@ def segment_monthly_trend(months: int = 12, segment_id: int | None = None) -> li
 
 def executive_segment_cards() -> dict[str, Any]:
     """Cards for executive summary: revenue/outstanding per segment."""
+    if db.use_snapshot_fallback():
+        import vercel_snapshot as vs
+        return vs.executive_segment_cards()
     rows = segment_dashboard()
     cards = {"segments": rows}
     for r in rows:

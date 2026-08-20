@@ -430,10 +430,12 @@ def health():
     try:
         import db as _db
         if rp.is_vercel() and not _db.vercel_db_configured():
-            db_msg = (
-                "Set AZURE_SQL_CONNECTION_STRING on Vercel (from Azure Portal), "
-                "or AZURE_SQL_HOST + AZURE_SQL_USER + AZURE_SQL_PASSWORD. "
-                "Run Setup Vercel Database.bat on your PC to sync local data.")
+            if _db.use_snapshot_fallback():
+                db_ok, db_msg = _db.test_connection()
+            else:
+                db_msg = (
+                    "Set AZURE_SQL_CONNECTION_STRING on Vercel, "
+                    "or run export_vercel_snapshot.py and redeploy.")
         else:
             db_ok, db_msg = _db.test_connection()
     except Exception as exc:  # noqa: BLE001
