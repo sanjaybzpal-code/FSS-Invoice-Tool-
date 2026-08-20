@@ -12,7 +12,7 @@ SQL_DIR = os.path.join(HERE, "database")
 
 
 def _is_vercel() -> bool:
-    return os.environ.get("VERCEL") == "1"
+    return bool(os.environ.get("VERCEL_ENV"))
 
 
 def _import_pyodbc():

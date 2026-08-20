@@ -75,7 +75,7 @@ def load_config() -> dict:
             pass
     with open(CONFIG_PATH, "r", encoding="utf-8") as fh:
         cfg = json.load(fh)
-    if os.environ.get("VERCEL") == "1":
+    if rp.is_vercel():
         cfg.setdefault("paths", {})["output_folder"] = rp.invoices_dir()
     return cfg
 
@@ -200,6 +200,12 @@ def index():
             {"BusinessSegmentId": 2, "BusinessSegmentName": "FSS Consultancy"},
             {"BusinessSegmentId": 3, "BusinessSegmentName": "Next Gen"},
         ]
+    db_ok, db_msg = False, ""
+    try:
+        import db as _db
+        db_ok, db_msg = _db.test_connection()
+    except Exception as exc:  # noqa: BLE001
+        db_msg = str(exc)
     next_pf = "PF-00001"
     try:
         import ledger_service as ls
@@ -224,6 +230,8 @@ def index():
         user=auth.current_user(),
         is_admin=auth.is_admin(auth.current_user()),
         share_url=share_url(config),
+        db_ok=db_ok,
+        db_message=db_msg,
     )
 
 
@@ -421,7 +429,7 @@ def health():
     db_ok, db_msg = False, "not configured"
     try:
         import db as _db
-        if os.environ.get("VERCEL") == "1" and not os.environ.get("AZURE_SQL_HOST"):
+        if rp.is_vercel() and not os.environ.get("AZURE_SQL_HOST"):
             db_msg = "Set AZURE_SQL_HOST on Vercel"
         else:
             db_ok, db_msg = _db.test_connection()

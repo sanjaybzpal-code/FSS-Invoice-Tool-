@@ -5,7 +5,12 @@ from __future__ import annotations
 import os
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-IS_VERCEL = os.environ.get("VERCEL") == "1"
+# VERCEL_ENV is set only on Vercel — ignore stray VERCEL=1 on local Windows.
+IS_VERCEL = bool(os.environ.get("VERCEL_ENV"))
+
+
+def is_vercel() -> bool:
+    return IS_VERCEL
 
 
 def data_root() -> str:
