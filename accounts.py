@@ -509,17 +509,23 @@ def receipts():
     client_id = request.args.get("client_id", type=int)
     edit_receipt = None
     edit_alloc = {"invoice_ids": []}
+    rows, clients, next_rcp = [], [], "RCP-00001"
     try:
         rows = ls.list_receipts(client_id)
         clients = ls.list_clients()
+    except Exception as exc:  # noqa: BLE001
+        flash(str(exc))
+    try:
         next_rcp = ls.next_receipt_number()
+    except Exception:
+        next_rcp = "RCP-00001"
+    try:
         if edit_id:
             edit_receipt = ls.get_receipt(edit_id)
             if edit_receipt:
                 edit_alloc = ls.get_receipt_allocations(edit_id)
-    except Exception as exc:  # noqa: BLE001
-        flash(str(exc))
-        rows, clients, next_rcp = [], [], "RCP-00001"
+    except Exception:
+        pass
     return render_template(
         "accounts/receipts.html",
         receipts=rows, clients=clients, next_receipt=next_rcp,

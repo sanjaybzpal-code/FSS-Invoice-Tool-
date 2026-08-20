@@ -229,6 +229,9 @@ def next_non_gst_bill_number() -> str:
 
 
 def peek_non_gst_bill_number() -> str:
+    s = _snap()
+    if s:
+        return s.peek_non_gst_bill_number()
     with db.get_connection() as conn:
         cur = conn.cursor()
         cur.execute("SELECT NextValue FROM dbo.LedgerSequence WHERE SeqName = N'NONGST'")
@@ -355,6 +358,9 @@ def delete_non_gst_bill(bill_id: int) -> tuple[bool, str]:
 
 
 def next_proforma_number() -> str:
+    s = _snap()
+    if s:
+        return s.next_proforma_number()
     with db.get_connection() as conn:
         cur = conn.cursor()
         cur.execute("DECLARE @n NVARCHAR(30); EXEC dbo.sp_NextProformaNumber @n OUTPUT; SELECT @n")
@@ -549,6 +555,9 @@ def enrich_invoices_with_files(rows: list[dict], output_folder: str) -> list[dic
 
 # --- Receipts (credit) -------------------------------------------------------
 def next_receipt_number() -> str:
+    s = _snap()
+    if s:
+        return s.next_receipt_number()
     with db.get_connection() as conn:
         cur = conn.cursor()
         cur.execute("DECLARE @n NVARCHAR(30); EXEC dbo.sp_NextReceiptNumber @n OUTPUT; SELECT @n")
@@ -712,6 +721,9 @@ def get_receipt(receipt_id: int) -> dict | None:
 
 def get_receipt_allocations(receipt_id: int) -> dict:
     """Return invoice_ids allocated to this receipt."""
+    s = _snap()
+    if s:
+        return s.get_receipt_allocations(receipt_id)
     with db.get_connection() as conn:
         cur = conn.cursor()
         cur.execute(

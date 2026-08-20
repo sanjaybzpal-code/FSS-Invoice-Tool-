@@ -261,6 +261,45 @@ def next_proforma_number() -> str:
     return peek_proforma_number()
 
 
+def peek_receipt_number() -> str:
+    nums = []
+    for r in _tables().get("Receipts", []):
+        num = str(r.get("ReceiptNumber") or "")
+        if num.upper().startswith("RCP-"):
+            try:
+                nums.append(int(num.split("-", 1)[1]))
+            except ValueError:
+                pass
+    n = max(nums) + 1 if nums else 1
+    return f"RCP-{n:05d}"
+
+
+def next_receipt_number() -> str:
+    return peek_receipt_number()
+
+
+def peek_non_gst_bill_number() -> str:
+    nums = []
+    for b in _tables().get("NonGstBills", []):
+        num = str(b.get("BillNumber") or "")
+        if num.upper().startswith("NGB-"):
+            try:
+                nums.append(int(num.split("-", 1)[1]))
+            except ValueError:
+                pass
+    n = max(nums) + 1 if nums else 1
+    return f"NGB-{n:05d}"
+
+
+def get_receipt_allocations(receipt_id: int) -> dict:
+    inv_ids = [
+        int(a["InvoiceId"])
+        for a in _tables().get("ReceiptInvoiceAllocations", [])
+        if int(a.get("ReceiptId", 0)) == receipt_id and a.get("InvoiceId") is not None
+    ]
+    return {"invoice_ids": inv_ids}
+
+
 def outstanding_dashboard() -> dict:
     invoices = _tax_invoices_only(_tables().get("TaxInvoices", []))
     receipts = _tables().get("Receipts", [])
