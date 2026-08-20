@@ -3,11 +3,7 @@
   "functions": {
     "index.py": {
       "maxDuration": 60,
-      "excludeFiles": "{Invoices/**,Exports/**,temp_imports/**,logs/**,app.py,*.bat,*.ps1,*.pyw,**/__pycache__/**,**/*.pdf,**/*.xlsx,auth.json,.secret_key}"
-    },
-    "web.py": {
-      "maxDuration": 60,
-      "excludeFiles": "{Invoices/**,Exports/**,temp_imports/**,logs/**,app.py,*.bat,*.ps1,*.pyw,**/__pycache__/**,**/*.pdf,**/*.xlsx,auth.json,.secret_key}"
+      "excludeFiles": "{Invoices/**,Exports/**,temp_imports/**,logs/**,desktop_app.py,*.bat,*.ps1,*.pyw,**/__pycache__/**,**/*.pdf,**/*.xlsx,auth.json,.secret_key}"
     }
   }
 }

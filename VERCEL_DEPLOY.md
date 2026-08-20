@@ -82,7 +82,8 @@ Login: `ADMIN_USERNAME` + `ADMIN_PASSWORD`
 ## Agar Vercel par error aaye
 
 1. **Build failed** → `requirements.txt` check karein
-2. **Database error** → Azure firewall + env variables check karein
+2. **500 / crash on load** → `pyproject.toml` must list dependencies (Vercel uses uv, not only `requirements.txt`). Redeploy after git push.
+3. **Database error** → Azure firewall + env variables check karein
 3. **Login nahi ho raha** → `ADMIN_USERNAME` / `ADMIN_PASSWORD` set karein
 
 ---

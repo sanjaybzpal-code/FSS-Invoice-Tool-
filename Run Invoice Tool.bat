@@ -6,9 +6,9 @@ set PYTHONUTF8=1
 REM Try the py launcher first, then fall back to python.
 where py >nul 2>nul
 if %errorlevel%==0 (
-    py app.py
+    py desktop_app.py
 ) else (
-    python app.py
+    python desktop_app.py
 )
 
 if %errorlevel% neq 0 (
