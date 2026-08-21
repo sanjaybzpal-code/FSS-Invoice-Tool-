@@ -1,4 +1,21 @@
-# Vercel par deploy — FSS Invoice Tool
+# 24x7 live (office PC band ho to bhi)
+
+Office PC + Cloudflare **hamesha ON nahi** reh sakta. Permanent live:
+
+**Azure SQL (FREE) + existing Vercel URL**  
+https://fss-invoice-tool.vercel.app
+
+1. Double-click **`Always Live.bat`**
+2. Browser mein Azure SQL **Start free** se database `FSSInvoice` banao
+3. SQL login + password yaad rakho; firewall: **Allow Azure services = ON**
+4. Bat window mein server / user / password daalo (local data copy ho jayegi)
+5. Vercel → Settings → Environment Variables mein 7 values paste + **Redeploy**
+
+Azure SQL free: https://aka.ms/azuresqlhub
+
+---
+
+## Step 1 — Azure SQL Database (free tier)
 
 Yeh app **Flask + SQL Server** par bani hai. Vercel par chalane ke liye **cloud database (Azure SQL)** chahiye — local `(local)` SQL Server Vercel se connect nahi hoga.
 
